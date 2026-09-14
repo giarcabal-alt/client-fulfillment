@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 ### Added
+- Server-side CRUD for roles: `src/lib/talent-acquisition/roles-actions.ts`
+  (`createRole`, `updateRoleTitle`, `updateRoleJobDescription`,
+  `updateRoleStatus`, `deleteRole`) — every action derives the user via
+  `getUser()` server-side (never a client-passed id), relies on RLS org
+  scoping for authorization (no external side effect to separately check),
+  and fails securely with generic messages while logging real errors
+  server-side. `/talent-acquisition/roles` lists roles with an inline-editable
+  title, job description, and status (save-on-blur / save-on-select, each
+  field its own Server Action call), a status badge, a live candidate count
+  per role, delete (blocked with a friendly message if candidates still
+  reference the role), and a form to add a new role.
+- Found and fixed a real bug while building this: the tables from the Prompt 3
+  migration had RLS but no table-level Postgres `GRANT`s, so every request —
+  even with the service-role key — failed with "permission denied", before
+  RLS was ever evaluated. Added
+  `supabase/migrations/20260914060451_fix_grants_and_roles_delete_policy.sql`
+  (grants + default privileges for `authenticated`/`service_role`, deliberately
+  none for `anon`) alongside the roles `delete` RLS policy this task needed.
+  Neither this nor the Prompt 3 migration has been applied yet — see
+  `docs/PROJECT_STATE.md`.
 - Database schema as a Supabase migration
   (`supabase/migrations/20260914053122_initial_schema.sql`), not applied —
   `profiles`, `roles`, `candidates`, `candidate_history`, `candidate_drafts`,

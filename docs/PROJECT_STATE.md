@@ -1,6 +1,6 @@
 # Client Fulfillment App — Project State & Handover
 
-_Last updated: 2026-09-14 by Claude Code (Prompt 3 — database schema)_
+_Last updated: 2026-09-14 by Claude Code (Prompt 4 — roles CRUD + page)_
 
 ---
 
@@ -11,7 +11,7 @@ Internal tool for UpScaleSupport to run talent acquisition end-to-end: candidate
 - Frontend: Next.js (App Router) + TypeScript + Tailwind CSS v4 (CSS-first `@theme` config, no `tailwind.config.js`) + shadcn/ui
 - Design: UpScaleSupport Brand Guide v2 (locked 2026-07-23), documented in `docs/DESIGN_SYSTEM.md`
 - Backend/API: Next.js Server Actions (no separate API layer)
-- DB: Supabase Postgres — project created (`urfvgbdkxmvlnvwdkdaz`). Schema written as a migration (`supabase/migrations/20260914053122_initial_schema.sql`) but **not yet applied** to the remote project — see §6.
+- DB: Supabase Postgres — project created (`urfvgbdkxmvlnvwdkdaz`). Schema + grants fix written as two migrations, **neither applied yet** to the remote project — see §6.
 - Auth: Supabase Auth (email/password, invite-only, no public signup)
 - Infra/hosting: Vercel — not yet deployed, not yet linked
 - Repo: not yet created
@@ -38,6 +38,8 @@ Known gotchas (carried forward from the 3PL project — likely to recur here too
 - Local dev and Vercel both need `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` set (even to placeholders) or the proxy's `getUser()` call throws on every request — see `.env.local` and `vercel env ls`.
 - Adding `NEXT_PUBLIC_`-prefixed env vars via `vercel env add` prompts/errors unless you pass `--type config` explicitly — the CLI treats anything that "looks like a credential" under a public prefix as ambiguous and refuses to guess. This is expected for the Supabase anon key (it's meant to be public); use `--type secret` instead for anything that must stay hidden (e.g. `SUPABASE_SERVICE_ROLE_KEY`, which the CLI already defaults to Secret on its own since it has no `NEXT_PUBLIC_` prefix).
 - Migrations in this repo are written and reviewed by hand, then applied deliberately (`supabase db push` / `db reset`) — never as a side effect of writing the file. If a migration file exists but its tables don't show up when querying the app, check whether it's actually been applied yet before assuming a bug.
+- **All six tables from the Prompt 3 migration came back `permission denied for table X` (Postgres 42501) when tested directly against the real project's REST API — with both the anon key and the service-role key**, even though RLS policies exist. This is a missing table-level `GRANT`, not an RLS issue (RLS denial returns zero rows, not a 42501 error) — confirmed by testing with the service-role key, which bypasses RLS entirely and still got the same error. `supabase/migrations/20260914060451_fix_grants_and_roles_delete_policy.sql` fixes this, but **it hasn't been applied either**. If you apply the Prompt 3 migration alone and still get "permission denied," this is why — apply both migrations, in order, before testing anything against these tables.
+- This CLI session's `supabase` login only has access to an unrelated project (`3pl-sourcing`) — `supabase link` to this app's actual project (`urfvgbdkxmvlnvwdkdaz`) hasn't been done from here, so migrations were validated by direct REST calls (curl with the anon/service-role keys) instead of `supabase db push`/`db diff`. Whoever applies these migrations will need to link the correct project first.
 
 Project-specific watch-item (not yet encountered here, but worth checking every session given the design history — see §10):
 - Confirm the AI draft-generation call still only happens from a server action, never a client-side fetch. This app's design went through a version that called the Anthropic API directly from the browser before it was corrected — if any regression reintroduces that pattern, the API key would be exposed to anyone who opens dev tools.
@@ -45,6 +47,13 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
 ---
 
 ## 4. CURRENT STATE — what's done
+
+Prompt 4 (roles CRUD + page) from `BUILD_BRIEF.md` §9 is written, on top of Prompts 1–3:
+- `src/lib/talent-acquisition/roles-actions.ts`: `createRole`, `updateRoleTitle`, `updateRoleJobDescription`, `updateRoleStatus`, `deleteRole` — all Server Actions. Each calls `requireUser()` (a `getUser()` check, never `getSession()`) before touching the DB; none accept a user id or session state from the caller. These are plain DB reads/writes with no external side effect, so RLS's org scoping is the authorization boundary (per `SECURITY.md`, only actions with an external side effect need a check *beyond* RLS). Every action fails securely — generic client-facing error strings, real errors only ever hit `console.error` — including a specifically-worded one for `deleteRole` when a foreign-key violation (Postgres `23503`) means candidates still reference the role.
+- `/talent-acquisition/roles` (`src/app/(shell)/talent-acquisition/roles/`): a Server Component page fetches roles with a live candidate count via PostgREST's embedded-resource aggregate (`candidates(count)`), an `add role` form (`new-role-form.tsx`, `useActionState` + `createRole`), and one `RoleRow` client component per role (`role-row.tsx`) with inline-editable title (save on blur), job description (textarea, save on blur), and status (`Select`, save on change, rendered as a colored `Badge` — work-blue/open, growth-green/filled, stone/closed) plus a delete button. Added a link to it from the board placeholder page since nothing else pointed here yet.
+- Added `select` and `textarea` from shadcn/ui (no new npm dependencies — both used already-installed Base UI/cva plumbing).
+- **Found a real bug while testing this against the actual Supabase project**: every table came back `permission denied for table X` via direct REST calls, with *both* the anon and service-role keys — a missing table-level `GRANT`, not an RLS policy gap (confirmed since RLS denial returns empty results, not a 42501 permission error, and the service-role key bypasses RLS entirely yet still failed). Wrote `supabase/migrations/20260914060451_fix_grants_and_roles_delete_policy.sql` to grant `select`/`insert`/`update`/`delete` (+ matching default privileges for future tables) to `authenticated` and `service_role` — deliberately not `anon`, since this app has no unauthenticated data access. The same migration adds the `roles` `delete` RLS policy this task needed (the Prompt 3 migration only covered select/insert/update, per the brief). **Neither this migration nor Prompt 3's has been applied** — see §6/§7.
+- Not exercised end-to-end with real data: no migration is applied yet, and there's still no user account in the Supabase dashboard, so the roles page has only been verified by build/lint and by confirming the route still 307-redirects when unauthenticated.
 
 Prompt 3 (database schema) from `BUILD_BRIEF.md` §9 is written, on top of Prompts 1–2:
 - `supabase/migrations/20260914053122_initial_schema.sql` creates `profiles`, `roles`, `candidates`, `candidate_history`, `candidate_drafts`, and `org_settings` exactly per `BUILD_BRIEF.md` §4, in FK-safe order. Adds indexes on every `org_id`/foreign-key column used by the RLS policies. Seeds one `org_settings` row for the hardcoded org (`00000000-0000-0000-0000-000000000001`).
@@ -79,11 +88,12 @@ Nothing in progress.
 
 ## 6. NEXT TASK
 
-Apply the Prompt 3 migration (`supabase db push` against the real project, or `supabase db reset` locally once Docker Desktop is running), verify RLS policies as a non-owner authenticated user per `SECURITY.md`'s policy-verification requirement (not done yet — no policy has been tested against real data), then run Prompt 4 (`BUILD_BRIEF.md` §9): Roles CRUD + page.
+Link this app's real Supabase project (`supabase link --project-ref urfvgbdkxmvlnvwdkdaz`, whichever account owns it — the CLI here is logged into an unrelated one) and apply both pending migrations in order (`supabase db push`, or `db reset` locally once Docker Desktop is running): `20260914053122_initial_schema.sql` then `20260914060451_fix_grants_and_roles_delete_policy.sql`. Create at least one Supabase Auth user and a matching `profiles` row, then verify RLS policies as a non-owner authenticated user per `SECURITY.md`'s policy-verification requirement (still not done — no policy has been tested against real data) and confirm the roles page actually works end to end. Then run Prompt 5 (`BUILD_BRIEF.md` §9): Candidates CRUD.
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
-- **The Prompt 3 migration hasn't been applied yet** (deliberately — see §4/§6). Until it is, no `roles`/`candidates`/etc. tables exist in the real Supabase project.
+- **Neither migration has been applied yet** (deliberately — see §4/§6). Until they are, the roles page and its Server Actions will fail against the real project — first with "relation does not exist" (Prompt 3 not applied), then with "permission denied" (Prompt 3 applied but not the grants-fix migration) if applied out of order or partially.
+- **No rate limiting on the roles mutation actions.** `SECURITY.md` flags "any action that mutates state" for a rate-limiting review before shipping — `createRole`/`updateRole*`/`deleteRole` don't have any yet. Lower urgency than the AI drafting action (no per-call cost), but still an open item; revisit alongside the AI action's rate limiting (§7 below) rather than solving it twice.
 - **RLS policies haven't been verified against real data yet.** `SECURITY.md` requires testing each policy as a non-owner authenticated user before merge (e.g. confirm a second profile in the same org can see the first's candidates, and that a policy doesn't unintentionally match on `NULL`). This can only happen after the migration is applied and at least two profiles/users exist — do this before Prompt 4 builds real CRUD against these tables.
 - **Profile provisioning isn't decided.** `profiles` rows aren't created automatically today (no trigger on `auth.users` insert) — the brief doesn't specify one, and accounts are created manually in the Supabase dashboard per Prompt 2. Someone needs a `profiles` row before any RLS-protected query will return anything for them; decide whether that's a manual insert per new hire or a trigger, before onboarding a second recruiter.
 - **No real logo asset exists yet.** The sidebar wordmark (`src/components/shell/wordmark.tsx`) is a plain-text stand-in ("us." tile + lowercase "upscalesupport"), not the actual brand asset described in `DESIGN_SYSTEM.md` §5 (specific blue/gold coloring, exact wordmark artwork). Swap in the real SVG/PNG when one is available — don't try to hand-guess the brand's exact colors/kerning for it.
@@ -114,19 +124,22 @@ Apply the Prompt 3 migration (`supabase db push` against the real project, or `s
 - 2026-09-14 — Added a `security definer` `current_org_id()` function rather than inlining `(select org_id from profiles where id = auth.uid())` in every policy. This isn't just DRY — it's required correctness: a normal (non-definer) subquery in `profiles`' own select policy would recursively re-trigger that same policy on every row, either erroring or returning nothing. `security definer` (with `set search_path = public`, per Postgres's own guidance to avoid search-path hijacking) is the standard Supabase pattern for this.
 - 2026-09-14 — Seeded a single `org_settings` row for the hardcoded org directly in the migration, rather than leaving the table empty until Prompt 9's settings page inserts one. The org itself is already hardcoded everywhere else (every table's `org_id` default), so a settings page with nothing to read on first load seemed like an avoidable gap rather than a meaningful deferral.
 - 2026-09-14 — Migration was generated via `supabase migration new` (after a first-time `supabase init` for this project) rather than hand-naming the file, so its timestamp prefix matches what the Supabase CLI itself would produce and applies cleanly with `supabase db push`. Written but deliberately **not applied** — this task's instruction was explicit that migrations ship as files only, never run by hand.
+- 2026-09-14 — Roles CRUD Server Actions still validate manually rather than adding Zod, continuing the Prompt 2 decision — three fields (a required string, an optional string, a three-value enum) is still simple enough that hand-rolled checks aren't worse than a schema library. This is close to the line; candidates (Prompt 5) will have more fields and is the more likely place to actually cross it.
+- 2026-09-14 — Split roles editing into four separate Server Actions (`updateRoleTitle`/`updateRoleJobDescription`/`updateRoleStatus`) rather than one `updateRole(id, patch)` action, matching "one responsibility per function" (`CODING_STANDARDS.md` §3) and letting each field save independently on its own blur/change event without the client needing to track which fields changed.
+- 2026-09-14 — Table-level grants were fixed by adding an explicit migration (`grant ... to authenticated, service_role` + matching `alter default privileges`) rather than by re-running the Prompt 3 migration differently. This keeps every applied change in the migration history instead of silently fixing state by hand, and means it doesn't matter *how* the original migration got applied (dashboard, CLI, or otherwise) — this one is self-contained. Deliberately did not grant anything to `anon`, since the app has no unauthenticated data access; only `authenticated` and `service_role` need it.
 
 ## 9. FILE MAP
 
-Built so far (Prompts 1–3); rows still marked "not yet built" are the planned layout from `BUILD_BRIEF.md`.
+Built so far (Prompts 1–4); rows still marked "not yet built" are the planned layout from `BUILD_BRIEF.md`.
 
 | Area | Path |
 |---|---|
-| DB schema / migrations | `supabase/migrations/20260914053122_initial_schema.sql` — written, **not yet applied** (§4/§6) |
+| DB schema / migrations | `supabase/migrations/20260914053122_initial_schema.sql`, `20260914060451_fix_grants_and_roles_delete_policy.sql` — written, **neither yet applied** (§4/§6) |
 | Supabase CLI project config | `supabase/config.toml` |
 | Brand tokens, fonts, shadcn theme | `src/app/globals.css` |
 | Fonts loaded (next/font) | `src/app/layout.tsx` |
 | shadcn config | `components.json` |
-| shadcn primitives | `src/components/ui/` (button, card, badge, separator, input, label) |
+| shadcn primitives | `src/components/ui/` (button, card, badge, separator, input, label, select, textarea) |
 | Supabase browser client | `src/lib/supabase/client.ts` |
 | Supabase server client (cookie-based, `getUser()`) | `src/lib/supabase/server.ts` |
 | Supabase session-refresh helper | `src/lib/supabase/middleware.ts` (used by `src/proxy.ts`) |
@@ -138,9 +151,11 @@ Built so far (Prompts 1–3); rows still marked "not yet built" are the planned 
 | Shell root redirect | `src/app/(shell)/page.tsx` → `/talent-acquisition/board` |
 | Sign-out Server Action | `src/app/(shell)/actions.ts` |
 | Sidebar nav + wordmark stand-in | `src/components/shell/sidebar-nav.tsx`, `wordmark.tsx` |
-| Talent Acquisition board (placeholder) | `src/app/(shell)/talent-acquisition/board/page.tsx` |
+| Talent Acquisition board (placeholder, links to Roles) | `src/app/(shell)/talent-acquisition/board/page.tsx` |
+| Roles page (list + inline edit + add form) | `src/app/(shell)/talent-acquisition/roles/page.tsx`, `role-row.tsx`, `new-role-form.tsx` |
+| Roles Server Actions | `src/lib/talent-acquisition/roles-actions.ts` |
 | App-level settings | `src/app/(shell)/settings/` — not yet built |
-| Talent Acquisition roles/candidates routes | `src/app/(shell)/talent-acquisition/roles/`, `candidates/[id]/` — not yet built |
+| Candidates routes | `src/app/(shell)/talent-acquisition/candidates/[id]/` — not yet built |
 | Talent Acquisition domain logic | `src/lib/talent-acquisition/cadence.ts`, `scripts.ts` — not yet built |
 | AI draft-generation server action | wherever `generateSuggestedMessage()` lands per `BUILD_BRIEF.md` §5 — not yet built |
 | Design/logic reference (not shipped code) | `recruiting-desk.html` (prototype — logic reference only, not visual) |
