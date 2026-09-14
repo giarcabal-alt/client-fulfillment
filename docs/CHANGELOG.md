@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 ### Added
+- Database schema as a Supabase migration
+  (`supabase/migrations/20260914053122_initial_schema.sql`), not applied —
+  `profiles`, `roles`, `candidates`, `candidate_history`, `candidate_drafts`,
+  and `org_settings` per `BUILD_BRIEF.md` §4, with RLS enabled on every table
+  and org-scoped select/insert/update policies (derived through the parent
+  `candidates` row for the two tables without their own `org_id` column). Adds
+  a `security definer` `current_org_id()` helper so the `profiles` table's own
+  policy can check org membership without recursive RLS. Seeds the single
+  hardcoded org's `org_settings` row.
 - Invite-only Supabase email/password auth: a `/login` page (outside the shell)
   backed by a `login` Server Action, and a `(shell)` route group whose layout
   checks `supabase.auth.getUser()` server-side and redirects unauthenticated

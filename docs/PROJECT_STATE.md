@@ -1,6 +1,6 @@
 # Client Fulfillment App — Project State & Handover
 
-_Last updated: 2026-09-11 by Claude Code (Prompt 2 — app shell + auth)_
+_Last updated: 2026-09-14 by Claude Code (Prompt 3 — database schema)_
 
 ---
 
@@ -11,7 +11,7 @@ Internal tool for UpScaleSupport to run talent acquisition end-to-end: candidate
 - Frontend: Next.js (App Router) + TypeScript + Tailwind CSS v4 (CSS-first `@theme` config, no `tailwind.config.js`) + shadcn/ui
 - Design: UpScaleSupport Brand Guide v2 (locked 2026-07-23), documented in `docs/DESIGN_SYSTEM.md`
 - Backend/API: Next.js Server Actions (no separate API layer)
-- DB: Supabase Postgres — project created (`urfvgbdkxmvlnvwdkdaz`), no tables yet (schema is Prompt 3)
+- DB: Supabase Postgres — project created (`urfvgbdkxmvlnvwdkdaz`). Schema written as a migration (`supabase/migrations/20260914053122_initial_schema.sql`) but **not yet applied** to the remote project — see §6.
 - Auth: Supabase Auth (email/password, invite-only, no public signup)
 - Infra/hosting: Vercel — not yet deployed, not yet linked
 - Repo: not yet created
@@ -37,6 +37,7 @@ Known gotchas (carried forward from the 3PL project — likely to recur here too
 - The Vercel project (`client-fulfillment`) was originally linked with Framework Preset "Other" (from before the app existed), which made deploys silently serve 404s for every route even though `next build` succeeded — the Output Directory defaulted to `public`/`.` instead of the Next.js build output. Fixed via `vercel project update client-fulfillment --framework nextjs -y`. If a deploy ever 404s on `/` despite a clean build log, check `vercel project inspect client-fulfillment` for the Framework Preset first.
 - Local dev and Vercel both need `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` set (even to placeholders) or the proxy's `getUser()` call throws on every request — see `.env.local` and `vercel env ls`.
 - Adding `NEXT_PUBLIC_`-prefixed env vars via `vercel env add` prompts/errors unless you pass `--type config` explicitly — the CLI treats anything that "looks like a credential" under a public prefix as ambiguous and refuses to guess. This is expected for the Supabase anon key (it's meant to be public); use `--type secret` instead for anything that must stay hidden (e.g. `SUPABASE_SERVICE_ROLE_KEY`, which the CLI already defaults to Secret on its own since it has no `NEXT_PUBLIC_` prefix).
+- Migrations in this repo are written and reviewed by hand, then applied deliberately (`supabase db push` / `db reset`) — never as a side effect of writing the file. If a migration file exists but its tables don't show up when querying the app, check whether it's actually been applied yet before assuming a bug.
 
 Project-specific watch-item (not yet encountered here, but worth checking every session given the design history — see §10):
 - Confirm the AI draft-generation call still only happens from a server action, never a client-side fetch. This app's design went through a version that called the Anthropic API directly from the browser before it was corrected — if any regression reintroduces that pattern, the API key would be exposed to anyone who opens dev tools.
@@ -44,6 +45,13 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
 ---
 
 ## 4. CURRENT STATE — what's done
+
+Prompt 3 (database schema) from `BUILD_BRIEF.md` §9 is written, on top of Prompts 1–2:
+- `supabase/migrations/20260914053122_initial_schema.sql` creates `profiles`, `roles`, `candidates`, `candidate_history`, `candidate_drafts`, and `org_settings` exactly per `BUILD_BRIEF.md` §4, in FK-safe order. Adds indexes on every `org_id`/foreign-key column used by the RLS policies. Seeds one `org_settings` row for the hardcoded org (`00000000-0000-0000-0000-000000000001`).
+- RLS is enabled on all six tables. `roles`, `candidates`, and `org_settings` (which carry their own `org_id`) get straightforward org-scoped select/insert/update policies. `candidate_history` and `candidate_drafts` have no `org_id` column of their own (per the brief's schema) — their policies derive org membership through an `exists` subquery joining back to `candidates` on `candidate_id`.
+- Added a `security definer` SQL function, `public.current_org_id()`, that every policy calls to look up the caller's `org_id` from `profiles`. This is the standard Supabase fix for the recursion you'd otherwise hit on `profiles`' own policy (a normal policy querying `profiles` from inside a policy *on* `profiles` re-triggers RLS on itself); `profiles` also gets its own select/insert/update policies (select: same org; insert/update: only your own row, `id = auth.uid()`).
+- `supabase init` was run to create `supabase/config.toml` and `supabase/.gitignore` (first time this project has had a `supabase/` directory).
+- **Not yet applied anywhere** — not to the remote project, not to a local Docker shadow DB — per this task's explicit "do not apply it by hand" instruction. Validated by manual review only (balanced parens/dollar-quotes, correct table creation order, policy command counts) since running `supabase db push` or `db reset` would apply it. Apply with `supabase db push` (or `supabase db reset` for local dev, once Docker Desktop is running) when ready — see §7.
 
 Prompt 2 (app shell + auth) from `BUILD_BRIEF.md` §9 is complete, on top of Prompt 1:
 - A real Supabase project now exists (`urfvgbdkxmvlnvwdkdaz.supabase.co`) — no tables in it yet, that's Prompt 3.
@@ -71,10 +79,13 @@ Nothing in progress.
 
 ## 6. NEXT TASK
 
-Run Prompt 3 (`BUILD_BRIEF.md` §9): the database schema (candidates, roles, RLS policies) per §4.
+Apply the Prompt 3 migration (`supabase db push` against the real project, or `supabase db reset` locally once Docker Desktop is running), verify RLS policies as a non-owner authenticated user per `SECURITY.md`'s policy-verification requirement (not done yet — no policy has been tested against real data), then run Prompt 4 (`BUILD_BRIEF.md` §9): Roles CRUD + page.
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
+- **The Prompt 3 migration hasn't been applied yet** (deliberately — see §4/§6). Until it is, no `roles`/`candidates`/etc. tables exist in the real Supabase project.
+- **RLS policies haven't been verified against real data yet.** `SECURITY.md` requires testing each policy as a non-owner authenticated user before merge (e.g. confirm a second profile in the same org can see the first's candidates, and that a policy doesn't unintentionally match on `NULL`). This can only happen after the migration is applied and at least two profiles/users exist — do this before Prompt 4 builds real CRUD against these tables.
+- **Profile provisioning isn't decided.** `profiles` rows aren't created automatically today (no trigger on `auth.users` insert) — the brief doesn't specify one, and accounts are created manually in the Supabase dashboard per Prompt 2. Someone needs a `profiles` row before any RLS-protected query will return anything for them; decide whether that's a manual insert per new hire or a trigger, before onboarding a second recruiter.
 - **No real logo asset exists yet.** The sidebar wordmark (`src/components/shell/wordmark.tsx`) is a plain-text stand-in ("us." tile + lowercase "upscalesupport"), not the actual brand asset described in `DESIGN_SYSTEM.md` §5 (specific blue/gold coloring, exact wordmark artwork). Swap in the real SVG/PNG when one is available — don't try to hand-guess the brand's exact colors/kerning for it.
 - No user account exists in the Supabase dashboard yet, so the sign-in flow itself (as opposed to route protection) hasn't been exercised end-to-end. Create one via the Supabase dashboard (Authentication > Users) to test.
 - Whether/when to promote future deploys beyond this minimal confirmation build — no timeline set yet.
@@ -99,13 +110,19 @@ Run Prompt 3 (`BUILD_BRIEF.md` §9): the database schema (candidates, roles, RLS
 - 2026-09-11 — Renamed the Next.js `middleware.ts` convention file to `src/proxy.ts` (exporting `proxy` instead of `middleware`) — Next.js 16 deprecated the old convention name; the underlying session-refresh logic still lives in `src/lib/supabase/middleware.ts`.
 - 2026-09-11 — Route protection lives in the `(shell)` layout's own `getUser()` check, not in the proxy. The proxy only refreshes the session cookie on every request (the standard `@supabase/ssr` pattern) — it does not redirect. Putting the actual auth gate in the layout keeps the "what requires login" decision colocated with the routes it protects, and matches SECURITY.md's expectation that authorization checks happen where the code that needs them runs, not implicitly in shared middleware.
 - 2026-09-11 — Login form validates its two fields manually instead of adding Zod, even though `SECURITY.md` calls for "a strict schema library (e.g., Zod)" on Server Actions — two required strings didn't justify a new dependency under the standing "ask before adding a dependency" rule from Prompt 1. Revisit this when Prompt 3+'s candidate/role CRUD actions have real validation surface area (multiple fields, types, formats) where hand-rolled checks would actually be worse than a schema library.
+- 2026-09-14 — `candidate_history` and `candidate_drafts` were left without their own `org_id` column, matching `BUILD_BRIEF.md` §4's schema exactly, even though the brief's policy-shape paragraph lists them alongside the org-scoped tables. Their RLS policies instead derive org membership through an `exists` subquery against the parent `candidates` row (via `candidate_id`) — this satisfies "org-scoped" without adding a column the brief didn't ask for, at the cost of a join on every policy check (acceptable at this scale; revisit only if it shows up in query performance later).
+- 2026-09-14 — Added a `security definer` `current_org_id()` function rather than inlining `(select org_id from profiles where id = auth.uid())` in every policy. This isn't just DRY — it's required correctness: a normal (non-definer) subquery in `profiles`' own select policy would recursively re-trigger that same policy on every row, either erroring or returning nothing. `security definer` (with `set search_path = public`, per Postgres's own guidance to avoid search-path hijacking) is the standard Supabase pattern for this.
+- 2026-09-14 — Seeded a single `org_settings` row for the hardcoded org directly in the migration, rather than leaving the table empty until Prompt 9's settings page inserts one. The org itself is already hardcoded everywhere else (every table's `org_id` default), so a settings page with nothing to read on first load seemed like an avoidable gap rather than a meaningful deferral.
+- 2026-09-14 — Migration was generated via `supabase migration new` (after a first-time `supabase init` for this project) rather than hand-naming the file, so its timestamp prefix matches what the Supabase CLI itself would produce and applies cleanly with `supabase db push`. Written but deliberately **not applied** — this task's instruction was explicit that migrations ship as files only, never run by hand.
 
 ## 9. FILE MAP
 
-Built so far (Prompts 1–2); rows still marked "not yet built" are the planned layout from `BUILD_BRIEF.md`.
+Built so far (Prompts 1–3); rows still marked "not yet built" are the planned layout from `BUILD_BRIEF.md`.
 
 | Area | Path |
 |---|---|
+| DB schema / migrations | `supabase/migrations/20260914053122_initial_schema.sql` — written, **not yet applied** (§4/§6) |
+| Supabase CLI project config | `supabase/config.toml` |
 | Brand tokens, fonts, shadcn theme | `src/app/globals.css` |
 | Fonts loaded (next/font) | `src/app/layout.tsx` |
 | shadcn config | `components.json` |
@@ -122,7 +139,6 @@ Built so far (Prompts 1–2); rows still marked "not yet built" are the planned 
 | Sign-out Server Action | `src/app/(shell)/actions.ts` |
 | Sidebar nav + wordmark stand-in | `src/components/shell/sidebar-nav.tsx`, `wordmark.tsx` |
 | Talent Acquisition board (placeholder) | `src/app/(shell)/talent-acquisition/board/page.tsx` |
-| DB schema / migrations | `supabase/migrations/` — not yet built |
 | App-level settings | `src/app/(shell)/settings/` — not yet built |
 | Talent Acquisition roles/candidates routes | `src/app/(shell)/talent-acquisition/roles/`, `candidates/[id]/` — not yet built |
 | Talent Acquisition domain logic | `src/lib/talent-acquisition/cadence.ts`, `scripts.ts` — not yet built |
@@ -139,4 +155,6 @@ Built so far (Prompts 1–2); rows still marked "not yet built" are the planned 
 - **Every table gets `org_id` and RLS enabled on creation**, even though there's only one org today — this is what makes a future second org (or the eventual client/lead-gen app) a data change instead of a security rewrite. Don't add a table that skips this.
 - **The Talent Pool stage (`talent_pool`) must not get a cadence config with `touches` or `recurDays`.** No reminder pressure on parked candidates is a deliberate design choice, not an oversight — adding one back would undo the reason the pool exists.
 - **`roles.job_description` is the single source of truth for a requisition's JD**, not a per-candidate field — don't reintroduce a candidate-level job description column; it was deliberately removed to avoid duplicating the same text across every candidate on one role.
+- **`candidate_history` and `candidate_drafts` intentionally have no `org_id` column** — their RLS policies derive org membership through `candidate_id` → `candidates.org_id` instead. Don't "fix" this by adding a column without updating the policies (or vice versa); it's a deliberate match to `BUILD_BRIEF.md` §4's schema, not an oversight.
+- **`public.current_org_id()` must stay `security definer`.** Changing it to a normal function will break `profiles`' own select policy with RLS recursion (a policy on `profiles` querying `profiles` re-triggers itself). If it ever needs to change, keep `set search_path = public` too.
 - **Any Server Action with a side effect (the AI draft generator, any future third-party API call) needs its own authorization check beyond RLS** — RLS protects direct DB reads/writes, but an action calling an external API needs an explicit org/ownership check per `SECURITY.md`.
