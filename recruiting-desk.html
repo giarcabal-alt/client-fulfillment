@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Recruiting Desk</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap');
+
+:root{
+  --paper:#E7DCC0;
+  --paper-dark:#D6C598;
+  --card:#F4EEDA;
+  --ink:#2A2118;
+  --ink-light:#6B5F4C;
+  --line:#B8A87E;
+  --red:#A6402F;
+  --green:#3F5D46;
+  --amber:#B8862F;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Source Serif 4', Georgia, serif;
+  min-height:100vh;
+}
+.mono{font-family:'Courier Prime', 'Courier New', monospace;}
+
+header{
+  padding:20px 28px 16px;
+  border-bottom:2px solid var(--line);
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:14px;
+}
+header h1{
+  font-family:'Courier Prime', monospace;
+  font-size:22px;
+  letter-spacing:0.5px;
+  margin:0;
+  font-weight:700;
+}
+header .sub{
+  font-size:13px;
+  color:var(--ink-light);
+  margin-top:4px;
+}
+.header-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+input, select, textarea{
+  font-family:'Source Serif 4', Georgia, serif;
+  font-size:14px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  background:var(--card);
+  color:var(--ink);
+  border-radius:2px;
+}
+button{
+  font-family:'Courier Prime', monospace;
+  font-size:13px;
+  padding:8px 14px;
+  background:var(--ink);
+  color:var(--paper);
+  border:none;
+  border-radius:2px;
+  cursor:pointer;
+}
+button.secondary{
+  background:transparent;
+  color:var(--ink);
+  border:1px solid var(--ink);
+}
+button.small{padding:5px 10px;font-size:12px;}
+button:hover{opacity:0.85;}
+
+#board{
+  display:flex;
+  gap:14px;
+  padding:20px 20px 60px;
+  overflow-x:auto;
+}
+.column{
+  min-width:230px;
+  max-width:230px;
+  flex-shrink:0;
+}
+.tab{
+  background:var(--paper-dark);
+  font-family:'Courier Prime',monospace;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.3px;
+  padding:8px 10px 6px;
+  border-radius:6px 6px 0 0;
+  border:1px solid var(--line);
+  border-bottom:none;
+  display:flex;
+  justify-content:space-between;
+}
+.tab .count{color:var(--ink-light);}
+.column-body{
+  border:1px solid var(--line);
+  border-radius:0 0 4px 4px;
+  min-height:120px;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background:rgba(255,255,255,0.15);
+}
+.column-body.empty::after{
+  content:"No one here yet";
+  font-size:12px;
+  color:var(--ink-light);
+  font-style:italic;
+  padding:10px 4px;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:2px;
+  padding:10px 10px 8px;
+  cursor:pointer;
+  position:relative;
+}
+.card::before{
+  content:"";
+  position:absolute;
+  top:0; right:0;
+  border-width:0 10px 10px 0;
+  border-style:solid;
+  border-color:var(--paper-dark) var(--paper) var(--paper) var(--paper-dark);
+}
+.card:hover{border-color:var(--ink);}
+.card .name{font-weight:700;font-size:14px;}
+.card .role{font-size:12px;color:var(--ink-light);margin-top:1px;}
+.badge{
+  display:inline-block;
+  margin-top:8px;
+  font-family:'Courier Prime',monospace;
+  font-size:10px;
+  letter-spacing:0.5px;
+  padding:2px 6px;
+  border-radius:2px;
+  transform:rotate(-2deg);
+  border:1px solid currentColor;
+}
+.badge.overdue{color:var(--red);}
+.badge.soon{color:var(--amber);}
+.badge.ok{color:var(--green);}
+.badge.done{color:var(--ink-light);}
+.card .action-label{font-size:11px;margin-top:4px;color:var(--ink-light);}
+
+#overlay{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.35);
+  z-index:10;
+}
+#drawer{
+  display:none;
+  position:fixed;
+  top:0;right:0;
+  width:min(420px,92vw);
+  height:100%;
+  background:var(--paper);
+  border-left:2px solid var(--ink);
+  z-index:11;
+  overflow-y:auto;
+  padding:22px;
+}
+#drawer h2{font-family:'Courier Prime',monospace;font-size:19px;margin:0 0 2px;}
+#drawer .role-line{color:var(--ink-light);font-size:13px;margin-bottom:14px;}
+.field-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
+.field-row label{font-size:12px;color:var(--ink-light);font-family:'Courier Prime',monospace;min-width:70px;}
+.section-title{
+  font-family:'Courier Prime',monospace;
+  font-size:11px;
+  letter-spacing:0.5px;
+  color:var(--ink-light);
+  border-bottom:1px solid var(--line);
+  padding-bottom:4px;
+  margin:20px 0 10px;
+}
+.script-box{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:2px;
+  padding:12px;
+  font-size:13.5px;
+  white-space:pre-wrap;
+  line-height:1.5;
+  max-height:260px;
+  overflow-y:auto;
+}
+.drawer-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.history-entry{font-size:12px;color:var(--ink-light);margin-bottom:6px;}
+#toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--paper);
+  font-family:'Courier Prime',monospace;
+  font-size:12px;padding:8px 16px;border-radius:3px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+  z-index:20;
+}
+#toast.show{opacity:1;}
+
+#addModal{
+  display:none;
+  position:fixed;inset:0;
+  z-index:15;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.35);
+}
+#addModal .box{
+  background:var(--paper);
+  border:2px solid var(--ink);
+  border-radius:4px;
+  padding:22px;
+  width:min(360px,90vw);
+}
+#addModal h3{font-family:'Courier Prime',monospace;margin-top:0;}
+#addModal .field{margin-bottom:12px;display:flex;flex-direction:column;gap:4px;}
+#addModal label{font-size:12px;font-family:'Courier Prime',monospace;color:var(--ink-light);}
+#addModal input, #addModal select{width:100%;}
+#loading{padding:60px;text-align:center;color:var(--ink-light);font-family:'Courier Prime',monospace;}
+
+.chat-log{
+  max-height:260px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:8px;
+  padding-right:2px;
+}
+.chat-msg{display:flex;flex-direction:column;align-items:flex-start;}
+.chat-msg.user{align-items:flex-end;}
+.chat-bubble{
+  font-size:13px;
+  line-height:1.45;
+  white-space:pre-wrap;
+  padding:8px 10px;
+  border-radius:3px;
+  max-width:88%;
+}
+.chat-msg.user .chat-bubble{background:var(--ink);color:var(--paper);}
+.chat-msg.assistant .chat-bubble{background:var(--card);border:1px solid var(--line);}
+.chat-msg .small{margin-top:3px;}
+.chat-empty{font-size:12px;color:var(--ink-light);font-style:italic;padding:6px 0;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.chip{
+  font-family:'Courier Prime',monospace;
+  font-size:11px;
+  padding:4px 8px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:transparent;
+  color:var(--ink-light);
+  cursor:pointer;
+}
+.chip:hover{border-color:var(--ink);color:var(--ink);}
+.chat-input-row{display:flex;gap:6px;align-items:flex-end;}
+.chat-input-row textarea{
+  flex:1;
+  resize:vertical;
+  min-height:44px;
+  font-family:'Source Serif 4',Georgia,serif;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RECRUITING DESK</h1>
+    <div class="sub">Candidate pipeline — scripts and reminders built in</div>
+  </div>
+  <div class="header-controls">
+    <label class="mono" style="font-size:12px;color:var(--ink-light);">Company</label>
+    <input id="companyInput" placeholder="Your company" style="width:140px;">
+    <label class="mono" style="font-size:12px;color:var(--ink-light);">Your name</label>
+    <input id="recruiterInput" placeholder="Your name" style="width:130px;">
+    <button onclick="openAddModal()">+ New Candidate</button>
+  </div>
+</header>
+
+<div id="loading">Opening the desk…</div>
+<div id="board" style="display:none;"></div>
+
+<div id="overlay" onclick="closeDrawer()"></div>
+<div id="drawer"></div>
+
+<div id="addModal">
+  <div class="box">
+    <h3>New Candidate</h3>
+    <div class="field">
+      <label>Name</label>
+      <input id="newName" placeholder="Candidate name">
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <input id="newRole" placeholder="e.g. Senior Backend Engineer">
+    </div>
+    <div class="field">
+      <label>Notes (optional)</label>
+      <input id="newNotes" placeholder="How you found them, context...">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="secondary" onclick="closeAddModal()">Cancel</button>
+      <button onclick="submitAddCandidate()">Add to Sourced</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const DAY = 86400000;
+
+const STAGES = [
+  {key:'sourced', label:'SOURCED'},
+  {key:'contacted', label:'CONTACTED'},
+  {key:'phone_screen', label:'PHONE SCREEN'},
+  {key:'interviewing', label:'INTERVIEWING'},
+  {key:'offer', label:'OFFER'},
+  {key:'onboarding', label:'ONBOARDING'},
+];
+
+const STAGE_CONFIG = {
+  sourced: {
+    touches:[{day:0, label:'Send initial outreach', script:'coldOutreach'}],
+  },
+  contacted: {
+    touches:[
+      {day:3, label:'Send follow-up #1', script:'followup1'},
+      {day:8, label:'Send follow-up #2 (breakup)', script:'followup2'},
+    ],
+    exhaustedLabel:'No response yet — reply-check manually or archive',
+  },
+  phone_screen: {
+    touches:[
+      {day:0, label:'Send scheduling note + prep call script', script:'phoneScreenScript'},
+      {day:1, label:'Send post-call thank-you', script:'postScreenThankYou'},
+    ],
+    recurDays:6, recurLabel:'Send status update (even with no news)', recurScript:'statusUpdate',
+  },
+  interviewing: {
+    touches:[],
+    recurDays:6, recurLabel:'Send status update (even with no news)', recurScript:'statusUpdate',
+  },
+  offer: {
+    touches:[
+      {day:0, label:'Call with verbal offer, then send written offer', script:'verbalOffer'},
+      {day:2, label:'Check in if no response', script:'offerCheckin1'},
+      {day:4, label:'Second check-in / deadline reminder', script:'offerCheckin2'},
+    ],
+    exhaustedLabel:'Awaiting decision — check in by phone',
+  },
+  onboarding: {
+    touches:[
+      {day:0, label:'Send acceptance confirmation', script:'acceptanceConfirm'},
+      {day:3, label:'Pre-start check-in', script:'preStartCheckin'},
+      {day:7, label:'Day 1 welcome message', script:'day1Welcome'},
+      {day:14, label:'End of Week 1 check-in', script:'week1Checkin'},
+      {day:44, label:'30-day check-in', script:'day30Checkin'},
+      {day:74, label:'60-day check-in', script:'day60Checkin'},
+      {day:104, label:'90-day check-in', script:'day90Checkin'},
+    ],
+    exhaustedLabel:'Onboarding complete ✓',
+  },
+};
+
+function scriptText(key, c, settings){
+  const name = c.name || '[Candidate]';
+  const role = c.role || '[Role]';
+  const company = settings.company || '[Company]';
+  const you = settings.recruiter || '[Your Name]';
+  const T = {
+    coldOutreach:
+`Hi ${name},
+
+I'm ${you}, recruiting for ${role} at ${company}. Your background caught my eye — happy to share more if you're open to a quick conversation.
+
+Not asking for a commitment, just 15 minutes to see if it's worth a real conversation. Open to a call this week or next?
+
+${you}`,
+    followup1:
+`Hi ${name} — following up in case this got buried. Totally understand if the timing's off. If you're curious at all about the ${role} role at ${company}, happy to send more detail or hop on a quick call. If not, no worries.`,
+    followup2:
+`Hi ${name} — I'll stop here after this one. If the timing isn't right, totally understand. If you ever want to hear more about ${company} or just compare notes, my door's open — no agenda. Good luck with everything.`,
+    phoneScreenScript:
+`[Send to candidate] Looking forward to our call — I'll walk through the ${role} role at ${company} and would love to hear what you're looking for next. Should take about 30 minutes.
+
+[Your call outline]
+- Open: How's your week going?
+- "What's prompting you to look right now?"
+- "Walk me through what you're working on day to day."
+- "What does your ideal next step look like?"
+- "What matters most in comp — base, equity, flexibility?"
+- Pitch ${company} tailored to what they said
+- Close: confirm next step + a specific follow-up date`,
+    postScreenThankYou:
+`Hi ${name}, thanks again for the time today — really enjoyed hearing about your work. I'll have an update on next steps from our end soon. Let me know if anything comes up on your side in the meantime.`,
+    statusUpdate:
+`Hi ${name} — quick update on the ${role} process: still finishing up on our end (nothing on you). Wanted to make sure you're not left wondering. I'll have something more concrete for you soon.`,
+    verbalOffer:
+`[Call first, then send] Hi ${name}, great news — the team at ${company} would like to extend an offer for ${role}. Walking you through the details on our call, then I'll follow up in writing today. Congrats!`,
+    offerCheckin1:
+`Hi ${name} — wanted to check in on the offer for ${role}. Happy to answer questions or jump on a call if useful.`,
+    offerCheckin2:
+`Hi ${name} — following up ahead of the decision deadline. Anything I can clarify to help you decide on the ${role} offer?`,
+    acceptanceConfirm:
+`Hi ${name}, thrilled to have you joining ${company} as ${role}! Sending next steps for paperwork shortly. Welcome to the team.`,
+    preStartCheckin:
+`Hi ${name} — excited for your start date to come around. Any questions about logistics or what to expect on day one?`,
+    day1Welcome:
+`Good morning ${name}! Welcome to ${company} — today's the day. I'll check in around midday to see how the morning's going. Excited to have you here.`,
+    week1Checkin:
+`Hey ${name}, one week down — how's it feeling so far? Anything confusing or that I can help unblock?`,
+    day30Checkin:
+`Hi ${name} — 30 days in. How's the role matching what we discussed during the interview process? Any feedback on the ramp-up so far?`,
+    day60Checkin:
+`Hi ${name} — 60 days in. How are things settling? Anything you need more support on?`,
+    day90Checkin:
+`Hi ${name} — 90 days in! How's it going overall, and any feedback on the hiring/onboarding process while it's fresh?`,
+  };
+  return T[key] || '';
+}
+
+let state = { candidates: [], settings: {company:'', recruiter:''} };
+let activeCandidateId = null;
+
+async function loadState(){
+  try{
+    const res = await window.storage.get('app-state', true);
+    if(res && res.value){
+      state = JSON.parse(res.value);
+    }
+  }catch(e){
+    // key doesn't exist yet — fine, use defaults
+  }
+  document.getElementById('companyInput').value = state.settings.company || '';
+  document.getElementById('recruiterInput').value = state.settings.recruiter || '';
+  document.getElementById('loading').style.display='none';
+  document.getElementById('board').style.display='flex';
+  render();
+}
+
+async function saveState(){
+  try{
+    await window.storage.set('app-state', JSON.stringify(state), true);
+  }catch(e){
+    showToast('Could not save — check connection');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+document.getElementById('companyInput').addEventListener('change', e=>{
+  state.settings.company = e.target.value; saveState();
+});
+document.getElementById('recruiterInput').addEventListener('change', e=>{
+  state.settings.recruiter = e.target.value; saveState();
+});
+
+function nextActionFor(c){
+  const cfg = STAGE_CONFIG[c.stage];
+  const touches = cfg.touches || [];
+  if(c.touchIndex < touches.length){
+    const t = touches[c.touchIndex];
+    return {
+      label: t.label,
+      script: t.script,
+      due: c.stageEnteredAt + t.day*DAY,
+      terminal:false,
+    };
+  }
+  if(cfg.recurDays){
+    const base = c.lastActionAt || c.stageEnteredAt;
+    return {
+      label: cfg.recurLabel,
+      script: cfg.recurScript,
+      due: base + cfg.recurDays*DAY,
+      terminal:false,
+    };
+  }
+  return { label: cfg.exhaustedLabel || 'No pending action', script:null, due:null, terminal:true };
+}
+
+function statusFor(action){
+  if(action.terminal) return 'done';
+  const now = Date.now();
+  if(action.due < now) return 'overdue';
+  if(action.due < now + 2*DAY) return 'soon';
+  return 'ok';
+}
+
+function fmtDate(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined,{month:'short', day:'numeric'});
+}
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  STAGES.forEach(st=>{
+    const col = document.createElement('div');
+    col.className='column';
+    const inStage = state.candidates.filter(c=>c.stage===st.key)
+      .sort((a,b)=>{
+        const aa = nextActionFor(a), bb = nextActionFor(b);
+        return (aa.due||Infinity) - (bb.due||Infinity);
+      });
+    col.innerHTML = `<div class="tab">${st.label}<span class="count">${inStage.length}</span></div>
+      <div class="column-body ${inStage.length===0?'empty':''}" id="col-${st.key}"></div>`;
+    board.appendChild(col);
+    const body = col.querySelector('.column-body');
+    inStage.forEach(c=>{
+      const action = nextActionFor(c);
+      const status = statusFor(action);
+      const card = document.createElement('div');
+      card.className='card';
+      card.onclick = ()=>openDrawer(c.id);
+      card.innerHTML = `
+        <div class="name">${escapeHtml(c.name)}</div>
+        <div class="role">${escapeHtml(c.role||'')}</div>
+        <div class="action-label">${escapeHtml(action.label)}</div>
+        <div class="badge ${status}">${badgeText(status, action.due)}</div>
+      `;
+      body.appendChild(card);
+    });
+  });
+}
+
+function badgeText(status, due){
+  if(status==='done') return 'NO ACTION DUE';
+  if(status==='overdue') return 'OVERDUE — was due ' + fmtDate(due);
+  if(status==='soon') return 'DUE ' + fmtDate(due);
+  return 'ON TRACK — due ' + fmtDate(due);
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function openAddModal(){
+  document.getElementById('addModal').style.display='flex';
+  document.getElementById('newName').value='';
+  document.getElementById('newRole').value='';
+  document.getElementById('newNotes').value='';
+}
+function closeAddModal(){ document.getElementById('addModal').style.display='none'; }
+
+function submitAddCandidate(){
+  const name = document.getElementById('newName').value.trim();
+  const role = document.getElementById('newRole').value.trim();
+  const notes = document.getElementById('newNotes').value.trim();
+  if(!name){ showToast('Name is required'); return; }
+  const now = Date.now();
+  state.candidates.push({
+    id: 'c_'+now+'_'+Math.random().toString(36).slice(2,7),
+    name, role, notes,
+    stage:'sourced',
+    stageEnteredAt: now,
+    lastActionAt: now,
+    touchIndex: 0,
+    history: [],
+    chatHistory: [],
+  });
+  saveState();
+  closeAddModal();
+  render();
+}
+
+function openDrawer(id){
+  activeCandidateId = id;
+  const c = state.candidates.find(x=>x.id===id);
+  if(!c) return;
+  const action = nextActionFor(c);
+  const status = statusFor(action);
+  const drawer = document.getElementById('drawer');
+  const stageOptions = STAGES.map(s=>`<option value="${s.key}" ${s.key===c.stage?'selected':''}>${s.label}</option>`).join('');
+  drawer.innerHTML = `
+    <button class="secondary small" onclick="closeDrawer()">✕ Close</button>
+    <h2>${escapeHtml(c.name)}</h2>
+    <div class="role-line">${escapeHtml(c.role||'No role set')}</div>
+
+    <div class="field-row">
+      <label>Stage</label>
+      <select id="stageSelect">${stageOptions}</select>
+    </div>
+    <div class="field-row">
+      <label>Notes</label>
+      <input id="notesField" value="${escapeHtml(c.notes||'')}" style="flex:1;">
+    </div>
+
+    <div class="section-title">NEXT ACTION</div>
+    <div class="badge ${status}" style="transform:none;margin-bottom:8px;">${badgeText(status, action.due)}</div>
+    <div style="font-size:14px;margin-bottom:10px;">${escapeHtml(action.label)}</div>
+
+    ${action.script ? `<div class="script-box" id="scriptBox"></div>
+    <div class="drawer-actions">
+      <button class="secondary small" onclick="copyScript()">Copy script</button>
+      <button class="small" onclick="markDone()">Mark done → next reminder</button>
+    </div>` : ''}
+
+    <div class="section-title">AI ASSISTANT</div>
+    <div class="chips">
+      <button class="chip" onclick="chipFill('Draft the next message for this stage.')">Draft next message</button>
+      <button class="chip" onclick="chipFill('The candidate just replied:\n\n\u0022PASTE THEIR MESSAGE HERE\u0022\n\nDraft a reply.')">They replied — draft response</button>
+      <button class="chip" onclick="chipFill('Make the last draft shorter and warmer.')">Make it shorter/warmer</button>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-input-row">
+      <textarea id="chatInput" placeholder="Paste what the candidate said, or just ask for a draft..."></textarea>
+      <button id="chatSendBtn" class="small" onclick="sendChatMessage()">Send</button>
+    </div>
+
+    <div class="section-title">HISTORY</div>
+    <div id="historyList">${c.history.length? c.history.map(h=>`<div class="history-entry">${fmtDate(h.at)} — ${escapeHtml(h.label)}</div>`).join('') : '<div class="history-entry">No actions logged yet.</div>'}</div>
+  `;
+  if(action.script){
+    document.getElementById('scriptBox').textContent = scriptText(action.script, c, state.settings);
+  }
+  renderChat(c);
+  document.getElementById('chatInput').addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendChatMessage();
+    }
+  });
+  document.getElementById('stageSelect').addEventListener('change', e=>{
+    moveStage(c.id, e.target.value);
+  });
+  document.getElementById('notesField').addEventListener('change', e=>{
+    c.notes = e.target.value; saveState();
+  });
+  document.getElementById('overlay').style.display='block';
+  drawer.style.display='block';
+}
+
+function closeDrawer(){
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('drawer').style.display='none';
+  activeCandidateId = null;
+  render();
+}
+
+function copyScript(){
+  const box = document.getElementById('scriptBox');
+  navigator.clipboard.writeText(box.textContent).then(()=>showToast('Script copied'));
+}
+
+function markDone(){
+  const c = state.candidates.find(x=>x.id===activeCandidateId);
+  if(!c) return;
+  const action = nextActionFor(c);
+  c.history.unshift({at:Date.now(), label:action.label});
+  c.lastActionAt = Date.now();
+  c.touchIndex += 1;
+
+  // sourced auto-advances to contacted after its single touch
+  if(c.stage==='sourced' && c.touchIndex >= STAGE_CONFIG.sourced.touches.length){
+    c.stage='contacted'; c.stageEnteredAt=Date.now(); c.touchIndex=0; c.lastActionAt=Date.now();
+  }
+  saveState();
+  openDrawer(c.id);
+}
+
+function buildSystemPrompt(c){
+  const s = state.settings;
+  const action = nextActionFor(c);
+  const stageLabel = STAGES.find(x=>x.key===c.stage)?.label || c.stage;
+  const styleRef = action.script ? scriptText(action.script, c, s) : '(no scripted template at this stage)';
+  return `You are helping ${s.recruiter || 'a recruiter'} at ${s.company || 'a company'} write short, natural recruiting emails and chat messages for one specific candidate. Only output the message itself (no "Here's a draft:" preamble) unless the recruiter asks for something else, like advice rather than a draft.
+
+Candidate: ${c.name}
+Role: ${c.role || 'not specified'}
+Current pipeline stage: ${stageLabel}
+Typical next action at this stage: ${action.label}
+Recruiter's notes on this candidate: ${c.notes || 'none'}
+
+Reference tone/style for this stage (a starting point, not something to repeat verbatim):
+"""
+${styleRef}
+"""
+
+When the recruiter pastes something the candidate said or wrote, respond to what they actually said — don't just restate the generic script. Keep messages concise, warm, specific, and free of corporate fluff. Calls beat emails at high-stakes moments (offers, negotiation, deadlines); mention that if relevant, but don't lecture about it in every reply.`;
+}
+
+async function callClaude(messages, system){
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1000,
+      system: system,
+      messages: messages,
+    })
+  });
+  const data = await res.json();
+  if(!res.ok){
+    throw new Error((data && data.error && data.error.message) || 'API error');
+  }
+  return (data.content||[]).map(b=>b.text||'').join('\n').trim();
+}
+
+function renderChat(c){
+  const log = document.getElementById('chatLog');
+  if(!log) return;
+  const hist = c.chatHistory || [];
+  if(hist.length===0){
+    log.innerHTML = '<div class="chat-empty">No messages yet. Try a suggestion above, or just describe what you need.</div>';
+    return;
+  }
+  log.innerHTML = hist.map((m,i)=>`
+    <div class="chat-msg ${m.role}">
+      <div class="chat-bubble">${escapeHtml(m.content)}</div>
+      ${m.role==='assistant' ? `<button class="secondary small" onclick="copyChatMsg(${i})">Copy</button>` : ''}
+    </div>
+  `).join('');
+  log.scrollTop = log.scrollHeight;
+}
+
+function copyChatMsg(index){
+  const c = state.candidates.find(x=>x.id===activeCandidateId);
+  if(!c) return;
+  navigator.clipboard.writeText(c.chatHistory[index].content).then(()=>showToast('Copied'));
+}
+
+function chipFill(text){
+  const input = document.getElementById('chatInput');
+  input.value = text;
+  input.focus();
+}
+
+async function sendChatMessage(){
+  const c = state.candidates.find(x=>x.id===activeCandidateId);
+  if(!c) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  c.chatHistory = c.chatHistory || [];
+  c.chatHistory.push({role:'user', content:text});
+  input.value='';
+  renderChat(c);
+  const sendBtn = document.getElementById('chatSendBtn');
+  sendBtn.disabled = true; sendBtn.textContent='...';
+  try{
+    const apiMessages = c.chatHistory.map(m=>({role:m.role, content:m.content}));
+    const reply = await callClaude(apiMessages, buildSystemPrompt(c));
+    c.chatHistory.push({role:'assistant', content: reply || '(empty response — try again)'});
+  }catch(e){
+    c.chatHistory.push({role:'assistant', content:'Something went wrong generating a reply. Try again in a moment.'});
+  }
+  sendBtn.disabled=false; sendBtn.textContent='Send';
+  saveState();
+  renderChat(c);
+}
+
+function moveStage(id, newStage){
+  const c = state.candidates.find(x=>x.id===id);
+  if(!c || c.stage===newStage) return;
+  c.history.unshift({at:Date.now(), label:'Moved to '+newStage.toUpperCase()});
+  c.stage = newStage;
+  c.stageEnteredAt = Date.now();
+  c.lastActionAt = Date.now();
+  c.touchIndex = 0;
+  saveState();
+  openDrawer(id);
+}
+
+loadState();
+</script>
+</body>
+</html>
