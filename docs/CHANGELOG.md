@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 ### Added
+- Server-side CRUD for candidates:
+  `src/lib/talent-acquisition/candidates-actions.ts` (`createCandidate`,
+  `updateCandidateStage`, `updateCandidateNotes`, `updateCandidateTags`,
+  `reassignCandidateRole`) — same auth pattern as the roles actions
+  (`getUser()`-derived user, fail-securely on errors). Candidate creation
+  matches the prototype's add-candidate flow (name, notes, tags) plus a role
+  choice the prototype didn't have to make (its "role" was free text; ours is
+  a real FK): pick an existing role, create one inline, or leave it unset —
+  unset defaults the candidate to `talent_pool` instead of `sourced`.
+  `updateCandidateStage` mirrors the prototype's `moveStage()` exactly
+  (resets `stage_entered_at`/`last_action_at`/`touch_index` and logs a
+  `candidate_history` row). Added an explicit authorization check beyond RLS
+  for any action that accepts a `role_id`: a role's RLS `select` policy
+  governs direct reads of that table, but doesn't stop an arbitrary UUID from
+  another org being accepted as a foreign key elsewhere, so `role_id`s are
+  re-verified visible to the caller before use. No UI for this yet — the
+  add-candidate form and board live in the next prompt.
 - Server-side CRUD for roles: `src/lib/talent-acquisition/roles-actions.ts`
   (`createRole`, `updateRoleTitle`, `updateRoleJobDescription`,
   `updateRoleStatus`, `deleteRole`) — every action derives the user via
