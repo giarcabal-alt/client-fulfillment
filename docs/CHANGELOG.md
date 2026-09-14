@@ -2,6 +2,44 @@
 
 ## [Unreleased]
 ### Added
+- A "+ New Candidate" button on the board opens a `Dialog` form
+  (`new-candidate-form.tsx`) calling `createCandidate` — name, an optional
+  notes field and a comma-separated tags field (matching the prototype's
+  add-candidate modal plus the tags field it didn't have), and a role picker
+  offering an existing role, "+ Create new role" (shows an inline title
+  field, creates the role alongside the candidate), or "No role — Talent
+  Pool" (defaults the candidate to the `talent_pool` stage). The board page
+  now also fetches the roles list to populate the picker. Closing the dialog
+  on success relies on the same `revalidatePath` the action already calls,
+  so the new card just appears in its column.
+- `/talent-acquisition/board`: seven columns (Talent Pool, then the six
+  pipeline stages), reading live from `candidates` joined to `roles` for the
+  title shown on each card, sorted by next-action due date ascending within
+  each column. A search box filters visible cards by name, role title, and
+  tags (client-side for v1, per the brief). Clicking a card opens a
+  drawer (shadcn `Sheet`) with a stage selector wired to
+  `updateCandidateStage`; deeper editing (notes, tags, role reassignment)
+  is intentionally left for the candidate detail page next, not duplicated
+  here. Layout/interaction (columns, drawer, status badges) is ported from
+  the prototype; all visual styling is `DESIGN_SYSTEM.md`'s tokens instead
+  of the prototype's own look — Warm Paper background, Stone-bordered cards,
+  Work Blue accents, Bricolage Grotesque headers, tabular numerals on the
+  per-column counts.
+- `src/lib/talent-acquisition/cadence.ts`: `STAGE_CONFIG`, `nextActionFor`,
+  and `statusFor` ported from the prototype's cadence math as pure functions,
+  plus a `talent_pool` stage config (no touches, no recurring reminder — a
+  deliberate no-pressure resting state, not an oversight) and its own status
+  outcome (`'parked'`, always shown instead of overdue/soon/ok regardless of
+  the underlying action). 13 unit tests in `cadence.test.ts` cover touch-index
+  progression, the exhausted→terminal and exhausted→recurring transitions,
+  the recurring-reminder date math (from `last_action_at` when present,
+  `stage_entered_at` otherwise), and the overdue/soon/ok status boundaries.
+  Added `vitest` as a dev dependency to run them (`npm test`) — the first
+  automated tests in this repo.
+- Checked whether the board's queries need any grants beyond the existing
+  `ALTER DEFAULT PRIVILEGES` migration: no new tables were added and the
+  board only reads `candidates`/`roles`, both already covered — no new
+  migration needed.
 - Server-side CRUD for candidates:
   `src/lib/talent-acquisition/candidates-actions.ts` (`createCandidate`,
   `updateCandidateStage`, `updateCandidateNotes`, `updateCandidateTags`,

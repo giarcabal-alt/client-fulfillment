@@ -1,6 +1,6 @@
 # Client Fulfillment App — Project State & Handover
 
-_Last updated: 2026-09-11 by [you]_
+_Last updated: 2026-09-14 by Claude Code (board UI follow-up — add-candidate modal)_
 
 ---
 
@@ -11,7 +11,7 @@ Internal tool for UpScaleSupport to run talent acquisition end-to-end: candidate
 - Frontend: Next.js (App Router) + TypeScript + Tailwind CSS v4 (CSS-first `@theme` config, no `tailwind.config.js`) + shadcn/ui
 - Design: UpScaleSupport Brand Guide v2 (locked 2026-07-23), documented in `docs/DESIGN_SYSTEM.md`
 - Backend/API: Next.js Server Actions (no separate API layer)
-- DB: Supabase Postgres — project not yet created. Deliberately on a **separate Supabase account** from the 3PL project, not just a separate project on the same account. Project ref: _fill in once created._
+- DB: Supabase Postgres — project created (ref `urfvgbdkxmvlnvwdkdaz`), deliberately on a **separate Supabase account** from the 3PL project, not just a separate project on the same account. Schema, grants, and the `profiles` sync trigger are all confirmed applied (see §4).
 - Auth: Supabase Auth (email/password, invite-only, no public signup)
 - Infra/hosting: Vercel — not yet deployed, not yet linked
 - Repo: not yet created
@@ -58,17 +58,20 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
 - Prompt 5: candidates CRUD as Server Actions only (create with optional `role_id` → defaults to `talent_pool` stage when unset, update stage/notes/tags, reassign role) — no page yet, that's Prompt 6. Includes an explicit re-check (`assertRoleIsVisible`) on any action accepting a `role_id`, since RLS on `roles` doesn't stop an out-of-org role UUID from being accepted as a foreign key — see fragile-area note in §10.
 - `recruiting-desk.html` (the prototype) copied into the repo root — previously only existed on disk outside the project, which Prompt 5's session had to track down manually. Fixed so future sessions don't hit the same gap.
 - One manual one-time step still needed for any pre-trigger user: the original test user was created before the profiles trigger existed, so it needed a manual `profiles` row insert. The trigger only covers users created from this point forward.
+- Prompt 6: `/talent-acquisition/board` — seven columns (Talent Pool + six pipeline stages), candidates joined to roles for title, sorted by next-action due date ascending per column, client-side search by name/role/tags. Clicking a card opens a `Sheet` drawer with a stage selector (wired to Prompt 5's `updateCandidateStage`) and the next-action badge; notes/tags/role-reassignment are deliberately not duplicated here — they're Prompt 7's candidate detail page. `src/lib/talent-acquisition/cadence.ts` ports the prototype's `STAGE_CONFIG`/`nextActionFor`/`statusFor` as pure functions (plus `talent_pool`'s no-pressure config and its own always-"parked" status), with 13 `vitest` unit tests — first automated tests in this repo, `vitest` added as a dev dependency to run them. Checked whether the board's reads needed any new grants: no, `candidates`/`roles` are both already covered by the existing `ALTER DEFAULT PRIVILEGES` migration, so no new migration was needed.
+- Follow-up to Prompt 6 (closing the gap flagged in §7 below): a "+ New Candidate" button on the board opens a `Dialog` (`new-candidate-form.tsx`) calling `createCandidate` — name, notes, tags, and the three-way role picker (existing role / "+ Create new role" with an inline title field / "No role — Talent Pool"). The board page now fetches the roles list alongside candidates to populate the picker. `createCandidate`'s existing `revalidatePath` is what makes the new card show up after the dialog closes — no extra client-side refetch logic needed.
 
 ## 5. IN PROGRESS
 
-Nothing in progress. About to run Prompt 6 (board UI) from `BUILD_BRIEF.md` §9 — this is what will make Prompt 5's candidate actions testable for the first time, since Prompt 5 was actions-only with no page.
+Nothing in progress.
 
 ## 6. NEXT TASK
 
-Run Prompt 6: board UI at `/talent-acquisition/board`, built from `DESIGN_SYSTEM.md` tokens (not the prototype's manila-folder visual styling — see §8 of that doc). This is the first point where candidates CRUD from Prompt 5 becomes testable end-to-end.
+Run Prompt 7 (`BUILD_BRIEF.md` §9): `/talent-acquisition/candidates/[id]` — role reassignment dropdown (including "no role — talent pool"), stage dropdown, notes field, tags field, a read-only job-description panel sourced from the assigned role (linking to `/talent-acquisition/roles` to edit it), next-action display with the relevant script, and the history log. Also port `src/lib/talent-acquisition/scripts.ts` from the prototype's `scriptText()` — not done yet, since this task was scoped to cadence logic only, not scripts.
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
+- **The board's drawer is intentionally minimal** (stage + next action only) — notes, tags, role reassignment, the job-description panel, the script text, and history all wait for Prompt 7's dedicated candidate detail page rather than being built twice. If Prompt 7 ends up wanting a different split (e.g. some of this moving into the drawer permanently), reconcile there rather than adding it back here piecemeal.
 - Whether/when to actually deploy to Vercel — no timeline set yet.
 - **RLS policy verification is incomplete.** SECURITY.md calls for testing each policy as a non-owner authenticated user before merging — not yet done, since only one test user exists so far. Do this properly once a second test user is created (Prompt 4+ territory): confirm one user genuinely cannot read/write another org's data, not just that policies exist.
 - Shared candidate/employee record design across this module and the future Onboarding/Kickoff modules — deliberately deferred until Onboarding is actually being built (see `BUILD_BRIEF.md` §3).
@@ -89,6 +92,13 @@ Run Prompt 6: board UI at `/talent-acquisition/board`, built from `DESIGN_SYSTEM
 - 2026-09-11 — Rejected embedding a Claude.ai Pro-subscription login inside the app to avoid API costs — Anthropic's terms don't allow routing a Free/Pro/Max login through a third-party application.
 - 2026-09-11 — Adopted the UpScaleSupport Brand Guide v2 (locked 2026-07-23) as the app's design system, resolving the open CSS-framework question in favor of Tailwind CSS v4 + shadcn/ui, matching the 3PL project's pattern. The prototype's manila-folder visual styling is fully superseded — only its layout/interaction logic (columns, drawer, badges) carries forward; see `DESIGN_SYSTEM.md` section 6.
 - 2026-09-14 — Any Server Action accepting a foreign-key ID into another org-scoped table (first case: `role_id` on candidates) re-verifies visibility via the caller's own scoped `SELECT`, rather than trusting the FK constraint alone. RLS on the referenced table (`roles`) only governs direct reads/writes of that table — it doesn't stop an out-of-org UUID from being accepted as a foreign key elsewhere, since FK constraints only check existence, not policy visibility. This pattern needs to be replicated for any future action taking an org-scoped foreign key. See fragile-area note in §10.
+- 2026-09-14 — Added `vitest` as this repo's first test dependency, specifically because `BUILD_BRIEF.md` §6 and this task both explicitly asked for cadence logic tests — not a general decision to start testing everything. Chosen over Node's built-in test runner for being the more standard/ergonomic choice on a Next.js/TS project; no React rendering is under test here so no jsdom/plugin setup was needed, just `vitest run`.
+- 2026-09-14 — `statusFor` checks `candidate.stage === 'talent_pool'` first and returns `'parked'` unconditionally, before ever looking at the computed next action — not derived from `nextActionFor`'s terminal flag. This matches the task's explicit requirement that Talent Pool always shows a neutral badge "rather than overdue," and keeps the no-pressure guarantee for parked candidates enforced in one obvious place instead of as an emergent property of `STAGE_CONFIG.talent_pool` having no touches/recurDays.
+- 2026-09-14 — The board's drawer only exposes the stage selector and next-action badge, not notes/tags/role-reassignment (which the prototype's drawer does have). `BUILD_BRIEF.md` explicitly scopes those to Prompt 7's dedicated `/talent-acquisition/candidates/[id]` page — building them into the board drawer too would mean two places doing the same edit, one of which (the drawer) has less room and less context (no job-description panel, no script, no history) to do it well.
+- 2026-09-14 — Used shadcn's `Sheet` component for the drawer rather than hand-rolling the prototype's fixed-position overlay + panel CSS — it's the standard composition for a slide-out detail panel and comes with focus management and animation for free.
+- 2026-09-14 — Used shadcn's `Dialog` (not `Sheet`) for the new-candidate form — the prototype's own add-candidate modal is a centered box, not a side panel, and `Dialog` is the standard match for that shape versus the drawer's slide-in pattern.
+- 2026-09-14 — The role picker in the new-candidate form is a single `Select` whose value is either an existing role's id, or one of two sentinel values (`"none"`, `"__new__"`) — not three separate controls (radio group + conditional select/input) — to keep it one mental model ("pick from this list, including two special entries") rather than a control that changes shape depending on another control's state. The three-way `role_mode`/`role_id`/`new_role_title` fields `createCandidate` actually expects are derived from that single piece of state via hidden inputs, keeping the Server Action's contract unchanged.
+- 2026-09-14 — Changed the submit button's label from the prototype's literal "Add to Sourced" to "Add candidate" — the prototype always created candidates into `sourced`, but ours can also land in `talent_pool` depending on the role choice, so the old label would be actively wrong about half the time. Matching the prototype's *fields and flow* took priority over matching its exact copy where the two are now in tension.
 
 ## 9. FILE MAP
 
@@ -97,12 +107,13 @@ Run Prompt 6: board UI at `/talent-acquisition/board`, built from `DESIGN_SYSTEM
 | DB schema / migrations | `supabase/migrations/` (schema, grants, profiles-trigger — all three confirmed applied) |
 | Shell layout (sidebar) | `src/app/(shell)/layout.tsx` |
 | App-level settings | `src/app/(shell)/settings/` (not yet built — Prompt 9) |
-| Talent Acquisition routes | `src/app/(shell)/talent-acquisition/roles/` (built), `board/`, `candidates/[id]/` (not yet built) |
-| Talent Acquisition domain logic | `src/lib/talent-acquisition/candidates-actions.ts`, `roles-actions.ts` (built); `cadence.ts`, `scripts.ts` (not yet built — Prompt 6/7) |
+| Talent Acquisition routes | `src/app/(shell)/talent-acquisition/roles/`, `board/` (built), `candidates/[id]/` (not yet built — Prompt 7) |
+| Board sub-components | `board/board-client.tsx` (search + columns + add-candidate dialog state), `candidate-card.tsx`, `candidate-drawer.tsx` (shadcn `Sheet`), `new-candidate-form.tsx` (shadcn `Dialog`) |
+| Talent Acquisition domain logic | `src/lib/talent-acquisition/candidates-actions.ts`, `roles-actions.ts`, `cadence.ts` (+ `cadence.test.ts`) built; `scripts.ts` not yet built — Prompt 7 |
+| Tests | `src/lib/talent-acquisition/cadence.test.ts` (`vitest run` / `npm test`) |
 | AI draft-generation server action | not yet built — Prompt 8 |
 | Design/logic reference (not shipped code) | `recruiting-desk.html` (prototype, now in repo root — logic reference only, not visual) |
 | Design system | `docs/DESIGN_SYSTEM.md` (UpScaleSupport Brand Guide v2, translated to dev tokens) |
-| Tests | None yet beyond the cadence-logic unit tests called for in `BUILD_BRIEF.md` §6 (not yet built) |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS
 
@@ -113,3 +124,4 @@ Run Prompt 6: board UI at `/talent-acquisition/board`, built from `DESIGN_SYSTEM
 - **`roles.job_description` is the single source of truth for a requisition's JD**, not a per-candidate field — don't reintroduce a candidate-level job description column; it was deliberately removed to avoid duplicating the same text across every candidate on one role.
 - **Any Server Action with a side effect (the AI draft generator, any future third-party API call) needs its own authorization check beyond RLS** — RLS protects direct DB reads/writes, but an action calling an external API needs an explicit org/ownership check per `SECURITY.md`.
 - **Any Server Action accepting a foreign-key ID into another org-scoped table must re-verify visibility itself, not trust the FK constraint.** RLS on the referenced table only governs direct access to that table — a FK constraint just checks the row exists, not whether the caller is allowed to see it. `candidates-actions.ts`'s `assertRoleIsVisible` pattern (re-running the caller's own scoped SELECT on `role_id` before accepting it) is the template to copy for any future action taking an org-scoped foreign key.
+- **`statusFor` must keep checking `talent_pool` before anything else, unconditionally.** It's not enough that `STAGE_CONFIG.talent_pool` has no touches/recurDays — a future change to that config (or a bug in `nextActionFor`) must not be able to make a parked candidate show as overdue. The explicit `if (candidate.stage === 'talent_pool') return 'parked'` at the top of `statusFor` is the actual guarantee, not an emergent property of the config.
