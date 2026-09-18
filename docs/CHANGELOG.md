@@ -1,7 +1,62 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- Board columns are narrower so all seven fit on a typical desktop viewport
+  without horizontal scrolling: column width `w-64 shrink-0` (256px, fixed)
+  → `min-w-[140px] flex-1`, the row's `gap-4` → `gap-3`. Sizing only — no
+  DESIGN_SYSTEM.md colors, radius, borders, or fonts changed. Narrow windows
+  still scroll horizontally, which is expected kanban behavior.
+- Fixed the board's column row clipping instead of scrolling at narrower
+  widths: `src/app/(shell)/layout.tsx`'s `<main>` was missing `min-w-0`, so
+  as a `flex-1` item it grew to fit the columns' full intrinsic width
+  instead of respecting the available viewport width, preventing the
+  board's own `overflow-x-auto` row from ever needing to scroll. Added
+  `min-w-0` to `main`. Verified live via Playwright MCP at 1440px (no
+  scroll needed), 1100px and 800px (scrollbar present, scrolling to the end
+  reveals every column, nothing clipped).
+- The board's horizontal scroll worked but had no visible affordance — the
+  native scrollbar only appears on hover/active-scroll (or not at all,
+  depending on OS "show scrollbars" settings; confirmed unreliable even
+  with `::-webkit-scrollbar`/`scrollbar-color`/`scrollbar-width` CSS during
+  testing). Replaced it with a custom always-visible scroll-position
+  indicator: `useHorizontalScrollThumb` in `board-client.tsx` tracks scroll
+  extent and renders a thin on-brand (`stone` track, `ink-navy`-tinted
+  thumb) bar below the column row, shown only when the row actually
+  overflows; the native scrollbar is hidden via the `.board-scrollbar`
+  utility in `globals.css`. Verified live via Playwright MCP: indicator
+  absent at 1440px, present immediately on fresh page load (no scroll/hover
+  needed) at 1100px/800px, and its thumb position/width tracks real scroll
+  state correctly.
+
 ### Added
+- `/talent-acquisition/candidates/[id]`: the full candidate detail page —
+  stage dropdown (`updateCandidateStage`), role reassignment dropdown
+  including "No role — Talent Pool" (`reassignCandidateRole`), notes and
+  tags fields (save-on-blur, `updateCandidateNotes`/`updateCandidateTags`),
+  a read-only job-description panel sourced from the assigned role with a
+  link to `/talent-acquisition/roles` to edit it, the next-action label with
+  its rendered script, and the full `candidate_history` log (newest first).
+  The board's drawer stays intentionally minimal (stage + next-action only)
+  — its "coming soon" note is now a "View full profile →" link to this page.
+  Added `src/lib/talent-acquisition/scripts.ts`, porting the prototype's
+  `scriptText()` templates verbatim as a pure function taking
+  `companyName`/`recruiterName` as explicit params (sourced from
+  `org_settings` and the caller's own `profiles` row) instead of the
+  prototype's local-storage settings object. Pulled the status-badge
+  style/label maps — previously duplicated in `candidate-card.tsx` and
+  `candidate-drawer.tsx` — into a shared
+  `src/lib/talent-acquisition/status-styles.ts` now that a third place
+  needed them. Checked whether this page's reads/writes
+  (`candidates`, `roles`, `org_settings`, `profiles`, `candidate_history`)
+  need any grants beyond the existing `ALTER DEFAULT PRIVILEGES` migration:
+  no, all five are already covered — no new migration needed.
+- Fixed the new-candidate form's role `Select` showing each option's raw
+  UUID as the trigger's visible value instead of its title — Base UI's
+  `Select.Value` renders the underlying value literally unless given a
+  `children` render-prop mapping value → label. Added a `roleLabelFor()`
+  helper and passed it to `SelectValue` as that render prop; the submitted
+  `role_id` (the UUID) was unaffected.
 - A "+ New Candidate" button on the board opens a `Dialog` form
   (`new-candidate-form.tsx`) calling `createCandidate` — name, an optional
   notes field and a comma-separated tags field (matching the prototype's

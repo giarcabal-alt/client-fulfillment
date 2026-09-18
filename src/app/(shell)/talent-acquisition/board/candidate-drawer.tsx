@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,31 +24,11 @@ import {
   type NextAction,
 } from "@/lib/talent-acquisition/cadence";
 import { updateCandidateStage } from "@/lib/talent-acquisition/candidates-actions";
+import {
+  STATUS_BADGE_LABELS,
+  STATUS_BADGE_STYLES,
+} from "@/lib/talent-acquisition/status-styles";
 import type { BoardCandidate } from "./board-client";
-
-const STATUS_STYLES: Record<CandidateStatus, string> = {
-  overdue: "bg-destructive text-white",
-  soon: "bg-sun-gold text-ink-navy",
-  ok: "bg-growth-green text-white",
-  done: "bg-stone text-slate-text",
-  parked: "bg-stone text-slate-text",
-};
-
-const STATUS_LABELS: Record<CandidateStatus, (action: NextAction) => string> = {
-  overdue: (action) => `Overdue — was due ${fmtDate(action.due)}`,
-  soon: (action) => `Due ${fmtDate(action.due)}`,
-  ok: (action) => `On track — due ${fmtDate(action.due)}`,
-  done: () => "No action due",
-  parked: () => "Parked",
-};
-
-function fmtDate(due: number | null) {
-  if (!due) return "";
-  return new Date(due).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export function CandidateDrawer({
   candidate,
@@ -108,16 +89,18 @@ export function CandidateDrawer({
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
               Next action
             </span>
-            <Badge className={cn("w-fit", STATUS_STYLES[status])}>
-              {STATUS_LABELS[status](action)}
+            <Badge className={cn("w-fit", STATUS_BADGE_STYLES[status])}>
+              {STATUS_BADGE_LABELS[status](action)}
             </Badge>
             <p className="text-sm">{action.label}</p>
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            Notes, tags, and role reassignment live on the full candidate
-            profile — coming soon.
-          </p>
+          <Link
+            href={`/talent-acquisition/candidates/${candidate.id}`}
+            className="w-fit text-sm text-work-blue underline"
+          >
+            View full profile →
+          </Link>
         </div>
       </SheetContent>
     </Sheet>

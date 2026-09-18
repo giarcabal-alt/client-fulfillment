@@ -100,3 +100,21 @@
     @apply font-display text-ink-navy;
   }
 }
+
+/*
+ * The talent-acquisition board's column row renders its own always-visible
+ * scroll-position indicator (see `useHorizontalScrollThumb` in
+ * board-client.tsx) instead of relying on the native browser/OS scrollbar,
+ * which auto-hides until hover/active-scroll (or is suppressed entirely
+ * depending on OS "show scrollbars" settings) and so gives no reliable cue
+ * that columns overflow off-screen. This hides the native scrollbar on that
+ * row so only our custom indicator shows.
+ */
+@layer utilities {
+  .board-scrollbar {
+    scrollbar-width: none;
+  }
+  .board-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

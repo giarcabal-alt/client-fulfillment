@@ -1,0 +1,76 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - complementary [ref=f4e3]:
+      - generic [ref=f4e4]:
+        - generic [ref=f4e5]:
+          - generic [ref=f4e6]: us.
+          - generic [ref=f4e7]: upscalesupport
+        - generic [ref=f4e8]: Client Fulfillment App
+        - navigation [ref=f4e9]:
+          - link "Talent Acquisition Desk" [ref=f4e10] [cursor=pointer]:
+            - /url: /talent-acquisition/board
+          - generic [ref=f4e11]:
+            - generic [ref=f4e12]: Onboarding
+            - generic [ref=f4e13]: Coming soon
+          - generic [ref=f4e14]:
+            - generic [ref=f4e15]: Kickoff
+            - generic [ref=f4e16]: Coming soon
+      - button "Sign out" [ref=f4e18]
+    - main [ref=f4e19]:
+      - generic [ref=f4e20]:
+        - generic [ref=f4e21]:
+          - generic [ref=f4e22]:
+            - heading "Talent Acquisition Desk" [level=1] [ref=f4e23]
+            - paragraph [ref=f4e24]: The candidate pipeline, Talent Pool included.
+          - link "Manage roles" [ref=f4e25] [cursor=pointer]:
+            - /url: /talent-acquisition/roles
+        - generic [ref=f4e26]:
+          - generic [ref=f4e27]:
+            - textbox "Search by name, role, or tag…" [ref=f4e28]
+            - button "+ New Candidate" [ref=f4e29]
+          - generic [ref=f4e30]:
+            - generic [ref=f4e31]:
+              - generic [ref=f4e32]:
+                - generic [ref=f4e33]: Talent Pool
+                - generic [ref=f4e34]: "1"
+              - generic [ref=f4e36] [cursor=pointer]:
+                - generic [ref=f4e37]: Pool Demiar
+                - generic [ref=f4e38]: No role set
+                - generic [ref=f4e39]: Parked in Talent Pool
+                - generic [ref=f4e40]: Parked
+            - generic [ref=f4e41]:
+              - generic [ref=f4e42]:
+                - generic [ref=f4e43]: Sourced
+                - generic [ref=f4e44]: "0"
+              - paragraph [ref=f4e46]: No one here yet
+            - generic [ref=f4e47]:
+              - generic [ref=f4e48]:
+                - generic [ref=f4e49]: Contacted
+                - generic [ref=f4e50]: "0"
+              - paragraph [ref=f4e52]: No one here yet
+            - generic [ref=f4e53]:
+              - generic [ref=f4e54]:
+                - generic [ref=f4e55]: Phone Screen
+                - generic [ref=f4e56]: "0"
+              - paragraph [ref=f4e58]: No one here yet
+            - generic [ref=f4e59]:
+              - generic [ref=f4e60]:
+                - generic [ref=f4e61]: Interviewing
+                - generic [ref=f4e62]: "0"
+              - paragraph [ref=f4e64]: No one here yet
+            - generic [ref=f4e65]:
+              - generic [ref=f4e66]:
+                - generic [ref=f4e67]: Offer
+                - generic [ref=f4e68]: "0"
+              - paragraph [ref=f4e70]: No one here yet
+            - generic [ref=f4e71]:
+              - generic [ref=f4e72]:
+                - generic [ref=f4e73]: Onboarding
+                - generic [ref=f4e74]: "1"
+              - generic [ref=f4e76] [cursor=pointer]:
+                - generic [ref=f4e77]: Gil Demiar
+                - generic [ref=f4e78]: test role 2
+                - generic [ref=f4e79]: Send acceptance confirmation
+                - generic [ref=f4e80]: Overdue — was due Sep 14
+  - button "Open Next.js Dev Tools" [ref=f4e86] [cursor=pointer]
+  - alert [ref=f4e90]

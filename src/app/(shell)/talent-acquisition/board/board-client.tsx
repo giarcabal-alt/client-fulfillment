@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +18,45 @@ import {
 import { CandidateCard } from "./candidate-card";
 import { CandidateDrawer } from "./candidate-drawer";
 import { NewCandidateForm } from "./new-candidate-form";
+
+/**
+ * Native OS/browser scrollbars render inconsistently (auto-hidden until
+ * hover/scroll, or suppressed entirely depending on OS "show scrollbars"
+ * settings), giving no reliable cue that the board has more columns
+ * off-screen. This tracks scroll position/extent so we can render our own
+ * always-visible, on-brand indicator instead of depending on native theming.
+ */
+function useHorizontalScrollThumb(ref: React.RefObject<HTMLDivElement | null>) {
+  const [thumb, setThumb] = useState<{ leftPct: number; widthPct: number } | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const update = () => {
+      const { scrollWidth, clientWidth, scrollLeft } = el;
+      if (scrollWidth <= clientWidth + 1) {
+        setThumb(null);
+        return;
+      }
+      const widthPct = (clientWidth / scrollWidth) * 100;
+      const maxScroll = scrollWidth - clientWidth;
+      const leftPct = (scrollLeft / maxScroll) * (100 - widthPct);
+      setThumb({ leftPct, widthPct });
+    };
+
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      resizeObserver.disconnect();
+    };
+  }, [ref]);
+
+  return thumb;
+}
 
 export type BoardCandidate = {
   id: string;
@@ -40,6 +79,8 @@ export function BoardClient({
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollThumb = useHorizontalScrollThumb(scrollRef);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -98,14 +139,15 @@ export function BoardClient({
         </DialogContent>
       </Dialog>
 
-      <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+        <div ref={scrollRef} className="board-scrollbar flex flex-1 gap-3 overflow-x-auto">
         {columns.map(({ stage, cards }) => (
-          <div key={stage.key} className="w-64 shrink-0">
+          <div key={stage.key} className="min-w-[140px] flex-1">
             <div className="flex items-center justify-between rounded-t-lg border border-b-0 border-border bg-stone px-3 py-2">
-              <span className="font-display text-sm text-ink-navy">
+              <span className="min-w-0 flex-1 truncate font-display text-sm text-ink-navy">
                 {stage.label}
               </span>
-              <span className="text-sm tabular-nums text-muted-foreground">
+              <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
                 {cards.length}
               </span>
             </div>
@@ -128,6 +170,21 @@ export function BoardClient({
             </div>
           </div>
         ))}
+        </div>
+        {scrollThumb && (
+          <div
+            className="h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-stone"
+            aria-hidden="true"
+          >
+            <div
+              className="h-full rounded-full bg-ink-navy/35"
+              style={{
+                marginLeft: `${scrollThumb.leftPct}%`,
+                width: `${scrollThumb.widthPct}%`,
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {selected && (
