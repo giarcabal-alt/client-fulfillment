@@ -19,12 +19,15 @@ const navItems = [
 
 const comingSoonItems = ["Onboarding", "Kickoff"];
 
-export function SidebarNav() {
+export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const items = isAdmin
+    ? [...navItems, { label: "Admin", href: "/admin", match: "/admin" }]
+    : navItems;
 
   return (
     <nav className="flex flex-col gap-1">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const isActive = pathname.startsWith(item.match);
         return (
           <Link

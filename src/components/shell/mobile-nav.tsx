@@ -18,7 +18,7 @@ import { Wordmark } from "./wordmark";
 // Below `md`, the always-visible sidebar (layout.tsx) is hidden in favor of
 // this compact top bar + slide-out Sheet, so the shell doesn't eat most of
 // a phone-width viewport with fixed-width nav.
-export function MobileNav() {
+export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
@@ -68,7 +68,7 @@ export function MobileNav() {
             <div className="mb-6 font-display text-lg">
               Client Fulfillment App
             </div>
-            <SidebarNav />
+            <SidebarNav isAdmin={isAdmin} />
           </div>
           <form action={signOut}>
             <button

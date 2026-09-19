@@ -2,36 +2,85 @@
 
 ## [Unreleased]
 ### Security
+- **Admin page (`/admin`) — step 2 of 4 on the admin/assignment feature.**
+  Explicit page-level authorization, not just a hidden nav link:
+  `getUserRole()` is checked in `page.tsx` before any data fetch, and a
+  non-admin navigating there directly gets a real `notFound()` (404), not
+  a redirect that would confirm the route exists. Verified live with two
+  separate accounts, not just "as me": the admin sees the full page; the
+  member gets the 404 and sees no "Admin" link in either the desktop
+  sidebar or the mobile menu. New `src/lib/supabase/admin-client.ts`
+  (renamed from a previously-scaffolded, never-used `service.ts` —
+  same service-role implementation, reused rather than duplicated) is
+  now **the one place in this codebase that intentionally bypasses
+  RLS**; see the fragile-area note added to `PROJECT_STATE.md` §10.
+  Lists every user (email via `supabase.auth.admin.listUsers()` — the
+  only way to get email, since `profiles` doesn't store it — joined with
+  `profiles` for role/display_name). An "Invite a teammate" form
+  (`inviteUser` in new `src/lib/admin-actions.ts`) uses
+  `supabase.auth.admin.inviteUserByEmail()`, not a signup + admin-set
+  password, so the admin never sets or sees another user's password —
+  verified live that both a Supabase-rejected bad-domain address and a
+  real-looking one hitting Supabase's own project email rate limit both
+  correctly surface as this app's generic "Couldn't send the invite"
+  message (SECURITY.md's fail-securely rule), never the raw Supabase
+  error. Per-row role `Select` (`updateUserRole`) and inline display-name
+  edit (`updateUserDisplayName`) both write through the admin client, not
+  the normal RLS-scoped one — RLS's "profiles: update own row" policy
+  only ever lets a caller touch their *own* row, so there's no policy an
+  admin editing someone *else's* row could go through otherwise.
+  `updateUserRole` guards two failure modes, per the task's explicit
+  ask, both verified live: an admin can't demote themselves
+  (unconditional, not dependent on admin count — tried it, got "You
+  can't demote yourself.", role reverted in the UI); demoting the last
+  remaining admin is blocked by counting current admins before allowing
+  the change (code-reviewed rather than independently live-reproduced —
+  with two test accounts, reaching "the target is the sole admin" always
+  also means the target is the acting user, which the self-demotion
+  guard already catches first). All three actions call
+  `requireAdminUser()` (new addition to `src/lib/auth/get-user-role.ts`,
+  alongside the existing `getUserRole()`/`requireAdmin()` — returns the
+  acting user too, needed for the self-demotion comparison) independently
+  of the page's own check, since Server Actions are reachable as their
+  own endpoints regardless of what page links to them (SECURITY.md).
+  **Flagged for rate-limiting review**: `inviteUser` sends an external
+  email with no app-level rate limit implemented yet — noted in the
+  action's own code comment; Supabase's project-level email rate limit is
+  the only backstop today (confirmed it's live, see above). Checked
+  grants: none needed — `auth.admin.*` runs off the service-role key
+  directly (not a PostgREST/RLS table read), and the `profiles` writes go
+  through the already-granted service-role Postgres role. Also confirms
+  the step-1 migrations below are now live in the database (verified
+  directly against `profiles`/`candidates`, not just assumed).
 - **Role-based authorization foundation — step 1 of 4 toward an admin
-  page + candidate-assignment feature. Schema and a helper only, no admin
-  UI yet. This is a genuine security-model shift, not just a feature
-  add**: every authorization check in this app so far has been
-  org-membership-only (RLS's `org_id = current_org_id()`); this adds the
-  app's first role-based (admin vs. member) concept. Two new migrations
-  — **⚠️ written but NOT yet applied**, no `SUPABASE_ACCESS_TOKEN`/pooler
-  connection string was available in the session that wrote them, and
-  `supabase link` is the known-broken workaround (`PROJECT_STATE.md` §3):
-  `profiles.role` (`text`, `check (role in ('admin','member'))`, default
-  `'member'`), and `candidates.assigned_to` (`uuid references
-  profiles(id)`, nullable, indexed — unused until the reassignment
-  feature itself is built). The `profiles.role` migration also adds a
-  `before update` trigger, `prevent_self_role_escalation`: the existing
-  "profiles: update own row" RLS policy has no column-level restriction,
-  so without this trigger any authenticated user could `PATCH` their own
-  `role` to `'admin'` via a direct Supabase REST call, entirely bypassing
-  this app's own Server Actions (which never expose a raw arbitrary-column
-  update). The trigger blocks that specific attack vector while still
-  allowing a service-role/SQL-Editor session through (`auth.uid()` is null
-  there) — which is what makes the manual first-admin bootstrap possible,
-  since there's no admin UI to do it any other way yet. New
-  `src/lib/auth/get-user-role.ts` (`getUserRole()`, `requireAdmin()`) —
-  every future admin-only Server Action must call this and check the
-  result explicitly inside the action itself, not just hide the UI that
-  links to it, per SECURITY.md's authorization-beyond-RLS rule. Checked
-  grants: none needed, both tables are already covered by the existing
-  blanket table-level grant (new columns on an existing granted table
-  don't need a fresh grant). **⚠️ No way to set the first admin through
-  the app** — see `PROJECT_STATE.md` §4/§5 for the exact manual SQL.
+  page + candidate-assignment feature. Schema and a helper only. This is
+  a genuine security-model shift, not just a feature add**: every
+  authorization check in this app before this had been org-membership-only
+  (RLS's `org_id = current_org_id()`); this added the app's first
+  role-based (admin vs. member) concept. Two migrations — **now confirmed
+  applied** (were written but not yet applied when first added; see the
+  step-2 entry above): `profiles.role` (`text`, `check (role in
+  ('admin','member'))`, default `'member'`), and `candidates.assigned_to`
+  (`uuid references profiles(id)`, nullable, indexed — unused until the
+  reassignment feature itself is built). The `profiles.role` migration
+  also adds a `before update` trigger, `prevent_self_role_escalation`:
+  the existing "profiles: update own row" RLS policy has no column-level
+  restriction, so without this trigger any authenticated user could
+  `PATCH` their own `role` to `'admin'` via a direct Supabase REST call,
+  entirely bypassing this app's own Server Actions (which never expose a
+  raw arbitrary-column update). The trigger blocks that specific attack
+  vector while still allowing a service-role/SQL-Editor session through
+  (`auth.uid()` is null there) — which is what made the first admin's
+  manual SQL bootstrap possible, and is also why `/admin`'s own
+  service-role writes (step 2, above) aren't blocked by this same
+  trigger. New `src/lib/auth/get-user-role.ts` (`getUserRole()`,
+  `requireAdmin()`) — every admin-only Server Action must call this (or
+  `requireAdminUser()`, step 2) and check the result explicitly inside
+  the action itself, not just hide the UI that links to it, per
+  SECURITY.md's authorization-beyond-RLS rule. Checked grants: none
+  needed, both tables are already covered by the existing blanket
+  table-level grant (new columns on an existing granted table don't need
+  a fresh grant).
 
 ### Changed
 - Mobile responsiveness pass across the whole shell and every existing

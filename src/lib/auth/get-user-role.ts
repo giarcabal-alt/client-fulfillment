@@ -42,3 +42,31 @@ export async function requireAdmin(): Promise<void> {
     throw new Error("Not authorized");
   }
 }
+
+// Same check as requireAdmin(), but also returns the acting user — for
+// admin actions that need to compare the caller's own id against a target
+// id (e.g. blocking an admin from demoting themselves in
+// src/lib/admin-actions.ts). Re-derives the user itself rather than
+// accepting one as a parameter, per SECURITY.md: never trust a
+// client-passed id for an authorization decision.
+export async function requireAdminUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error || !data || data.role !== "admin") {
+    throw new Error("Not authorized");
+  }
+
+  return user;
+}
