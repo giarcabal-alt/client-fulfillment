@@ -90,7 +90,7 @@ export function CandidateDrawer({
 
           <Link
             href={`/talent-acquisition/candidates/${candidate.id}`}
-            className="w-fit text-sm text-work-blue underline"
+            className="w-fit rounded-sm text-sm text-work-blue underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             View full profile →
           </Link>

@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 ### Fixed
+- **Candidate cards were keyboard-focusable but showed no visible focus
+  ring — a regression from the previous keyboard-accessibility fix.**
+  Root cause: `Card` (`src/components/ui/card.tsx`) applies `overflow-hidden`
+  as a fixed base class, and the nested `<button>` fix from the prior entry
+  sat flush with the card's own edges — a box-shadow (what a Tailwind
+  `ring` is) gets clipped by an *ancestor's* `overflow-hidden` once it
+  extends past that ancestor's box, so the button's `focus-visible:ring-3`
+  class was computing correctly and rendering nothing. Not a global
+  `outline-none` reset, as first suspected — every other interactive
+  element on the page (`Input`, `Select`) already showed its ring
+  correctly, since none of them sit inside an `overflow-hidden` ancestor
+  sized flush to their own edges. Fixed by moving the ring to the outer
+  `Card` via Tailwind's `has-[:focus-visible]` variant instead of the
+  nested button — an element's own shadow is never clipped by its own
+  `overflow`, only by an ancestor's — plus `overflow-visible` on the `Card`
+  instance as a second layer of insurance. While in there, per the task's
+  explicit ask, also checked the drawer's Stage `Select` (already correct)
+  and the search `Input` (already correct), and found the drawer's "View
+  full profile →" link had no explicit focus style at all, relying on the
+  browser's thin default outline — brought it in line with the same
+  `focus-visible:ring-3 focus-visible:ring-ring/50` treatment used
+  everywhere else for consistency. Verified live via Playwright MCP:
+  screenshotted the moment right after Tab landed on each of five elements
+  (search input, both board cards, drawer Select, drawer link) — all five
+  now show a clearly visible Work Blue ring, not just "Tab reaches them."
+  New fragile-area note added to `PROJECT_STATE.md` §10.
 - **Impeccable `audit` + `polish` pass on `/talent-acquisition/board`.**
   `audit` scored the page 15/20 (Good): a mechanical detector found nothing,
   but manual review plus live verification (contrast math, an
