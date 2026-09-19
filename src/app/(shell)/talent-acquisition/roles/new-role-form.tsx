@@ -13,15 +13,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createRole, type RoleActionState } from "@/lib/talent-acquisition/roles-actions";
+import {
+  CLASSIFICATION_LABELS,
+  NO_CLASSIFICATION_VALUE,
+} from "@/lib/talent-acquisition/role-classifications";
 
 const initialState: RoleActionState = { error: null };
-
-const CLASSIFICATION_LABELS: Record<string, string> = {
-  embedded_operator: "Embedded Operator",
-  project_based: "Project-Based",
-};
-
-const NO_CLASSIFICATION_VALUE = "none";
 
 export function NewRoleForm() {
   const formRef = useRef<HTMLFormElement>(null);

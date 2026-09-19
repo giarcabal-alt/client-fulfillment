@@ -2,6 +2,35 @@
 
 ## [Unreleased]
 ### Fixed
+- **Impeccable `audit` + `polish` pass on `/talent-acquisition/roles`.**
+  `audit` scored the page 16/20 (Good). Findings shown to the user before
+  any change, per convention: **[P2, theming]** the "Project-Based"
+  classification badge filled its background with Sun Gold — the same
+  Five Percent Rule violation just fixed on the board, introduced in the
+  earlier "four new fields" task before `DESIGN.md` existed to catch it.
+  **[P2, accessibility]** the Job description textarea and the
+  Status/Classification `Select` triggers in `role-row.tsx` had no
+  accessible name — confirmed live via the accessibility tree.
+  **[P3, implementation integrity]** `CLASSIFICATION_LABELS` and a `"none"`
+  sentinel were copy-pasted verbatim across `role-row.tsx` and
+  `new-role-form.tsx`. Checked whether the board's shared `StatusBadge`
+  could be reused here per the task's ask — it can't: it's typed to
+  candidate-specific cadence/due-date concepts (`CandidateStatus`/
+  `NextAction`), and role status/classification is a different domain
+  entirely; forcing it in would mean faking a `NextAction`. Treated the
+  `CLASSIFICATION_LABELS` duplication as the honest equivalent finding
+  instead. Fixes: Sun Gold moved to a small accent dot (new
+  `CLASSIFICATION_DOT` map, same pattern as the board's fix); added
+  `aria-label`s to the three unnamed controls; extracted the duplicated
+  label map into a new shared `src/lib/talent-acquisition/
+  role-classifications.ts` (mirroring `source-platforms.ts`). Verified
+  live at 1280px and 375px, including — given the board's focus-ring
+  regression found last session — a full keyboard Tab-through of every
+  interactive element on the page (Back button, all New Role form fields,
+  all five controls on an existing role row), screenshotting the moment
+  focus landed on each: all show a clear Work Blue ring. None of this
+  page's `Card` usages wrap a flush-fit nested button the way the board's
+  did, so that clipping bug's precondition doesn't exist here.
 - **Candidate cards were keyboard-focusable but showed no visible focus
   ring — a regression from the previous keyboard-accessibility fix.**
   Root cause: `Card` (`src/components/ui/card.tsx`) applies `overflow-hidden`

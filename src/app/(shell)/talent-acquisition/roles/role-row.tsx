@@ -22,6 +22,10 @@ import {
   updateRoleTimezoneOverlap,
   updateRoleTitle,
 } from "@/lib/talent-acquisition/roles-actions";
+import {
+  CLASSIFICATION_LABELS,
+  NO_CLASSIFICATION_VALUE,
+} from "@/lib/talent-acquisition/role-classifications";
 
 type RoleClassification = "embedded_operator" | "project_based";
 
@@ -47,16 +51,18 @@ const STATUS_LABELS: Record<Role["status"], string> = {
   closed: "Closed",
 };
 
-const NO_CLASSIFICATION_VALUE = "none";
-
-const CLASSIFICATION_LABELS: Record<RoleClassification, string> = {
-  embedded_operator: "Embedded Operator",
-  project_based: "Project-Based",
-};
-
+// Sun Gold is a sparing accent only — DESIGN.md's Five Percent Rule bans it
+// as a background or fill of any size (same rule the board's candidate
+// status badge was fixed for), so "Project-Based" stays on the same
+// ink-navy-family neutral treatment and gets its gold via a small accent
+// dot instead of a full fill.
 const CLASSIFICATION_STYLES: Record<RoleClassification, string> = {
   embedded_operator: "bg-ink-navy text-white",
-  project_based: "bg-sun-gold text-ink-navy",
+  project_based: "bg-stone text-ink-navy",
+};
+
+const CLASSIFICATION_DOT: Partial<Record<RoleClassification, string>> = {
+  project_based: "bg-sun-gold",
 };
 
 export function RoleRow({ role }: { role: Role }) {
@@ -163,7 +169,7 @@ export function RoleRow({ role }: { role: Role }) {
               aria-label="Role title"
             />
             <Select value={status} onValueChange={saveStatus}>
-              <SelectTrigger size="sm" disabled={isPending}>
+              <SelectTrigger size="sm" disabled={isPending} aria-label="Status">
                 <SelectValue>
                   <Badge className={cn(STATUS_STYLES[status])}>
                     {STATUS_LABELS[status]}
@@ -177,7 +183,7 @@ export function RoleRow({ role }: { role: Role }) {
               </SelectContent>
             </Select>
             <Select value={classification} onValueChange={saveClassification}>
-              <SelectTrigger size="sm" disabled={isPending}>
+              <SelectTrigger size="sm" disabled={isPending} aria-label="Classification">
                 <SelectValue>
                   {classification === NO_CLASSIFICATION_VALUE ? (
                     <span className="text-sm text-muted-foreground">
@@ -191,6 +197,19 @@ export function RoleRow({ role }: { role: Role }) {
                         ]
                       )}
                     >
+                      {CLASSIFICATION_DOT[
+                        classification as RoleClassification
+                      ] && (
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "size-1.5 shrink-0 rounded-full",
+                            CLASSIFICATION_DOT[
+                              classification as RoleClassification
+                            ]
+                          )}
+                        />
+                      )}
                       {
                         CLASSIFICATION_LABELS[
                           classification as RoleClassification
@@ -230,6 +249,7 @@ export function RoleRow({ role }: { role: Role }) {
             onBlur={saveJobDescription}
             disabled={isPending}
             placeholder="Job description…"
+            aria-label="Job description"
             rows={3}
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
