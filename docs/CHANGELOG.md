@@ -2,6 +2,44 @@
 
 ## [Unreleased]
 ### Security
+- **Candidate assignment — step 3 of 4 on the admin/assignment feature.**
+  Surfaces `candidates.assigned_to` (added in step 1) on
+  `/talent-acquisition/candidates/[id]`: everyone sees who a candidate is
+  currently assigned to (display name, or "Unassigned"); only admins get
+  a control to change it. New `assignment-field.tsx` renders read-only
+  text or an admin-only `Select` based on `isAdmin`, decided server-side
+  via `getUserRole()` in `page.tsx` — the same "convenience UI, not the
+  boundary" pattern as the admin nav link (step 2). The actual boundary
+  is the new `updateCandidateAssignment` (in
+  `talent-acquisition/candidates-actions.ts`), which requires two checks
+  per the task's explicit ask: `requireAdminUser()`, and that the target
+  profile is visible to the caller — mirroring `assertRoleIsVisible`'s
+  exact mechanism for `role_id` (a plain scoped `SELECT`, "not found"
+  treated as "not visible," not a bare trust of the foreign key).
+  Notably, this action uses the **normal RLS-scoped client, not
+  `admin-client.ts`** — RLS's "candidates: update within org" policy
+  already lets any org member write `assigned_to`, so nothing in the
+  database stops a non-admin from calling this; `requireAdminUser()` is
+  the *only* thing that does, a clean illustration of SECURITY.md's
+  authorization-beyond-RLS rule with zero help from the database. Same
+  reasoning for the assignable-profiles dropdown list (`id`,
+  `display_name` via the normal client) — RLS's "profiles: select own
+  org" already permits this read for any signed-in user, admin or not,
+  so there's no wall to bypass; reserving `admin-client.ts` for cases
+  that actually need it (per the architecture decision from step 2).
+  The current assignee's name is fetched via a
+  `profiles!assigned_to(id, display_name)` embed — `candidates` now has
+  *two* FKs to `profiles` (`created_by`, `assigned_to`), so the
+  column-name disambiguation hint is required; verified this exact
+  syntax directly against the live REST API (both null and populated
+  cases) before wiring it into the page. Verified live end-to-end with
+  two accounts: the member sees plain read-only "Unassigned" text with
+  no control; the admin sees the `Select`, correctly lists both org
+  profiles (with an "Unnamed teammate" fallback for a null
+  `display_name`), and both assigning and clearing an assignment persist
+  across a full page reload. Checked grants: none needed, no new
+  migration — both queries go through already-granted tables via
+  RLS-respecting clients.
 - **Admin page (`/admin`) — step 2 of 4 on the admin/assignment feature.**
   Explicit page-level authorization, not just a hidden nav link:
   `getUserRole()` is checked in `page.tsx` before any data fetch, and a

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireAdminUser } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
 
 export type CandidateActionState = { error: string | null };
@@ -257,6 +258,61 @@ export async function reassignCandidateRole(
 
   revalidatePath(BOARD_PATH);
   revalidatePath(ROLES_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+// Admin-only: who a candidate is currently owned by. Two checks, per
+// SECURITY.md's authorization-beyond-RLS rule and step 3 of the
+// admin/assignment feature (PROJECT_STATE.md §6): (1) requireAdminUser()
+// — RLS's "candidates: update within org" policy already lets *any* org
+// member write any column on a candidate, `assigned_to` included, so
+// nothing in the database itself stops a non-admin from calling this;
+// the role check is the only thing that does. (2) the target profile is
+// re-verified as actually visible to this caller (via the normal,
+// RLS-scoped client's "profiles: select own org" policy) before being
+// accepted — same shape as assertRoleIsVisible above for role_id: a FK
+// constraint alone only checks the row exists, not that this org would
+// recognize it as a teammate.
+export async function updateCandidateAssignment(
+  id: string,
+  assignedTo: string | null
+): Promise<CandidateActionState> {
+  try {
+    await requireAdminUser();
+    const supabase = await requireUser();
+
+    if (assignedTo) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", assignedTo)
+        .maybeSingle();
+      if (error || !data) {
+        throw new Error("ASSIGNEE_NOT_FOUND");
+      }
+    }
+
+    const { error } = await supabase
+      .from("candidates")
+      .update({ assigned_to: assignedTo })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    if (error instanceof Error && error.message === "ASSIGNEE_NOT_FOUND") {
+      return { error: "That teammate couldn't be found." };
+    }
+    if (
+      error instanceof Error &&
+      (error.message === "Not authenticated" || error.message === "Not authorized")
+    ) {
+      return { error: "Not authorized." };
+    }
+    console.error("Failed to update candidate assignment:", error);
+    return { error: "Couldn't update the assignment. Please try again." };
+  }
+
+  revalidatePath(BOARD_PATH);
   revalidatePath(candidatePath(id));
   return { error: null };
 }

@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getUserRole } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
 import {
   nextActionFor,
@@ -19,12 +20,18 @@ import {
   STATUS_BADGE_STYLES,
 } from "@/lib/talent-acquisition/status-styles";
 import { cn } from "@/lib/utils";
+import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
 
 type RoleEmbed = {
   id: string;
   title: string;
   job_description: string | null;
+};
+
+type ProfileEmbed = {
+  id: string;
+  display_name: string | null;
 };
 
 export default async function CandidateDetailPage({
@@ -45,11 +52,12 @@ export default async function CandidateDetailPage({
     { data: settingsRow },
     { data: historyData },
     { data: profileRow },
+    userRole,
   ] = await Promise.all([
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, role:roles(id, title, job_description)"
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -67,6 +75,7 @@ export default async function CandidateDetailPage({
           .eq("id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null as { display_name: string | null } | null }),
+    getUserRole(),
   ]);
 
   if (error) {
@@ -76,8 +85,29 @@ export default async function CandidateDetailPage({
     notFound();
   }
 
+  const isAdmin = userRole === "admin";
+
+  // Only fetched for admins — the assignment control they alone can see.
+  // RLS's "profiles: select own org" already scopes this to the caller's
+  // own org with no extra filtering needed.
+  const { data: assignableProfilesData } = isAdmin
+    ? await supabase.from("profiles").select("id, display_name").order("display_name")
+    : { data: null };
+  const assignableProfiles = (assignableProfilesData ?? []).map((p) => ({
+    id: p.id as string,
+    displayName: p.display_name as string | null,
+  }));
+
   const roleEmbed = candidateRow.role as RoleEmbed | RoleEmbed[] | null;
   const role = Array.isArray(roleEmbed) ? roleEmbed[0] ?? null : roleEmbed;
+
+  const assigneeEmbed = candidateRow.assignee as ProfileEmbed | ProfileEmbed[] | null;
+  const assigneeRow = Array.isArray(assigneeEmbed)
+    ? assigneeEmbed[0] ?? null
+    : assigneeEmbed;
+  const assignee = assigneeRow
+    ? { id: assigneeRow.id, displayName: assigneeRow.display_name }
+    : null;
 
   const candidate = {
     id: candidateRow.id as string,
@@ -133,8 +163,14 @@ export default async function CandidateDetailPage({
         <CardHeader>
           <CardTitle className="text-lg">Candidate</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <CandidateDetailForm candidate={candidate} roles={roles} />
+          <AssignmentField
+            candidateId={candidate.id}
+            assignee={assignee}
+            isAdmin={isAdmin}
+            assignableProfiles={assignableProfiles}
+          />
         </CardContent>
       </Card>
 
