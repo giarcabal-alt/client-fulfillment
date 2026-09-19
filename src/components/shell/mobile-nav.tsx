@@ -76,17 +76,19 @@ export function MobileNav({
               <SheetTitle className="sr-only">Navigation</SheetTitle>
             </SheetHeader>
             <Wordmark />
-            <Greeting displayName={displayName} />
             <SidebarNav isAdmin={isAdmin} />
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
-            >
-              Sign out
-            </button>
-          </form>
+          <div>
+            <Greeting displayName={displayName} />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </SheetContent>
       </Sheet>
     </header>

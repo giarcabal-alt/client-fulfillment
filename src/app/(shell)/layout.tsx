@@ -46,17 +46,19 @@ export default async function ShellLayout({
       <aside className="hidden w-64 shrink-0 flex-col justify-between bg-sidebar p-4 text-sidebar-foreground md:flex">
         <div>
           <Wordmark />
-          <Greeting displayName={displayName} />
           <SidebarNav isAdmin={isAdmin} />
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
-          >
-            Sign out
-          </button>
-        </form>
+        <div>
+          <Greeting displayName={displayName} />
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </aside>
       <MobileNav isAdmin={isAdmin} displayName={displayName} />
       <main className="min-w-0 flex-1 bg-background">{children}</main>

@@ -1,6 +1,26 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- **Sidebar layout follow-up (cosmetic, no schema/Server Action changes).**
+  Two changes to the sidebar built in the previous entry. (1) The
+  greeting + display name moved from the top (below the logo) to the
+  bottom, directly above "Sign out" — same `Greeting` component, just
+  relocated in `layout.tsx` and `mobile-nav.tsx`'s JSX (grouped into the
+  bottom `<div>` with the sign-out `<form>` instead of the top one with
+  `Wordmark`/`SidebarNav`). (2) `SidebarNav` now renders two visually
+  distinct groups instead of one flat list: the modules (Talent
+  Acquisition Desk, plus the disabled Onboarding/Kickoff placeholders)
+  stay together at the top; Settings and Admin (when `isAdmin`) moved to
+  a second group below a `stone`-toned `<hr>` divider
+  (`border-stone/20`, per DESIGN_SYSTEM.md's border-color token — the
+  same color card borders/dividers already use elsewhere). Verified live
+  at both desktop and 375px mobile widths — the mobile slide-out `Sheet`
+  is a separate component (`mobile-nav.tsx`) from the desktop `<aside>`
+  and needed its own check, not just an assumption that fixing
+  `SidebarNav` (shared by both) was sufficient: confirmed the divider
+  and bottom-greeting placement both render correctly inside the Sheet
+  too, not just the always-visible desktop sidebar.
 ### Security
 - **Sidebar polish — step 4 of 4 on the admin/assignment feature (closes it out).**
   UI-only, no schema or Server Action changes. Three parts: (1) the
