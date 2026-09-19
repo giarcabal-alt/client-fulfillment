@@ -170,7 +170,7 @@ export function CandidateDetailForm({
             onValueChange={handleStageChange}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Stage">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -192,7 +192,7 @@ export function CandidateDetailForm({
             onValueChange={handleRoleChange}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Role">
               <SelectValue>{(value: string) => roleLabelFor(value)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -219,7 +219,7 @@ export function CandidateDetailForm({
             onValueChange={handleSourceChange}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Source">
               <SelectValue>
                 {(value: string) => `Source: ${sourceLabelFor(value)}`}
               </SelectValue>
@@ -244,7 +244,7 @@ export function CandidateDetailForm({
             onValueChange={handleRatingChange}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Communication rating">
               <SelectValue>
                 {(value: string) => `Communication: ${ratingLabelFor(value)}`}
               </SelectValue>

@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 ### Fixed
+- **Impeccable `audit` + `polish` pass on `/talent-acquisition/candidates/[id]`.**
+  `audit` scored the page 19/20 (Excellent). Findings shown to the user
+  before any change, per convention: **[P2, accessibility]** all 5 `Select`
+  triggers on the page (Stage, Role, Source, Communication in
+  `candidate-detail-form.tsx`; Assigned to in `assignment-field.tsx`) had no
+  accessible name — confirmed live via the accessibility tree as unnamed
+  `combobox [ref=...]:` nodes, same class of gap just fixed on the roles
+  page. Checked whether the board's shared `StatusBadge` could stand in for
+  anything here per the task's ask — it already is reused, correctly, for
+  the header status pill (`page.tsx:153`); no duplicated status/cadence
+  logic was found to extract. Implementation Integrity verdict: pass —
+  detector (`impeccable detect --json`) returned zero findings both before
+  and after. Fix: added `aria-label` to each of the 5 `SelectTrigger`s,
+  matching their visible labels. Verified live at 1280px and 375px,
+  including a full keyboard Tab-through of every interactive element on the
+  page — Back to board link, all 5 selects, Notes textarea, Tags input,
+  Edit on the roles page link — screenshotting the moment focus landed on
+  each: all show a clear Work Blue ring at both widths. No horizontal
+  overflow at 375px (`scrollWidth === clientWidth`, both 360px).
 - **Impeccable `audit` + `polish` pass on `/talent-acquisition/roles`.**
   `audit` scored the page 16/20 (Good). Findings shown to the user before
   any change, per convention: **[P2, theming]** the "Project-Based"

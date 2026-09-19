@@ -74,7 +74,7 @@ export function AssignmentField({
         Assigned to
       </span>
       <Select value={assignedId} onValueChange={save} disabled={isPending}>
-        <SelectTrigger className="max-w-sm">
+        <SelectTrigger className="max-w-sm" aria-label="Assigned to">
           <SelectValue>{(value: string) => labelFor(value)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
