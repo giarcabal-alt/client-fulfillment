@@ -118,6 +118,7 @@ export function BoardClient({
     <div className="flex flex-1 flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between gap-4">
         <Input
+          aria-label="Search candidates"
           placeholder="Search by name, role, or tag…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -143,7 +144,7 @@ export function BoardClient({
         <div ref={scrollRef} className="board-scrollbar flex flex-1 gap-3 overflow-x-auto">
         {columns.map(({ stage, cards }) => (
           <div key={stage.key} className="min-w-[140px] flex-1">
-            <div className="flex items-center justify-between rounded-t-lg border border-b-0 border-border bg-stone px-3 py-2">
+            <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-border bg-stone px-3 py-2">
               <span className="min-w-0 flex-1 truncate font-display text-sm text-ink-navy">
                 {stage.label}
               </span>
@@ -151,7 +152,7 @@ export function BoardClient({
                 {cards.length}
               </span>
             </div>
-            <div className="flex min-h-32 flex-col gap-2 rounded-b-lg border border-border bg-warm-paper p-2">
+            <div className="flex min-h-32 flex-col gap-2 rounded-b-xl border border-border bg-warm-paper p-2">
               {cards.length === 0 && (
                 <p className="p-2 text-sm italic text-muted-foreground">
                   No one here yet

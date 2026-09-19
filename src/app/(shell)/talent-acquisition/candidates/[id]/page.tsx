@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -15,11 +14,7 @@ import {
   type CandidateStage,
 } from "@/lib/talent-acquisition/cadence";
 import { scriptFor } from "@/lib/talent-acquisition/scripts";
-import {
-  STATUS_BADGE_LABELS,
-  STATUS_BADGE_STYLES,
-} from "@/lib/talent-acquisition/status-styles";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
 
@@ -155,9 +150,7 @@ export default async function CandidateDetailPage({
               {role?.title ?? "No role set"}
             </p>
           </div>
-          <Badge className={cn("w-fit shrink-0", STATUS_BADGE_STYLES[status])}>
-            {STATUS_BADGE_LABELS[status](action)}
-          </Badge>
+          <StatusBadge status={status} action={action} className="w-fit shrink-0" />
         </div>
       </div>
 

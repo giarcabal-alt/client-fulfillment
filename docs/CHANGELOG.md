@@ -1,6 +1,50 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+- **Impeccable `audit` + `polish` pass on `/talent-acquisition/board`.**
+  `audit` scored the page 15/20 (Good): a mechanical detector found nothing,
+  but manual review plus live verification (contrast math, an
+  accessibility-tree check, both viewport widths) surfaced real issues.
+  Findings shown to the user before any change, per the audit's own
+  "show findings first" convention; user chose to fold the one P1 in with
+  the requested polish pass rather than defer it.
+  - **[P1, accessibility] Candidate cards were unreachable by keyboard or
+    screen reader.** They were plain `onClick` `<div>`s wrapped in `Card` —
+    confirmed via Playwright's accessibility tree as `role="generic"` with
+    no accessible name. Fixed by nesting a real `<button type="button">`
+    inside `Card` (which has no polymorphic `render` prop, unlike
+    `Button`/`Sheet`/`Select` — see the fragile-area note added to
+    `PROJECT_STATE.md` §10) with a descriptive `aria-label` built from the
+    same status string already shown on the card. Verified live: Tab
+    reaches the card, Enter opens the drawer.
+  - **[P2, theming] The "soon" status badge filled its whole background
+    with Sun Gold — a direct violation of `DESIGN.md`'s Five Percent Rule**
+    ("never a background, never a large fill"), a locked brand-guide
+    decision, not a default. Fixed by moving Sun Gold to a small accent dot
+    before the label instead, on the same neutral chip `done`/`parked`
+    already use. Considered a colored left-border accent first; rejected it
+    since Impeccable's own craft-floor guidance bans colored side-borders on
+    cards/chips, and Sun Gold as text color fails contrast outright
+    (1.48:1–1.70:1, checked). The badge-render logic (`Badge` + optional dot
+    + label) had already been hand-copied across three files — pulled into
+    one new shared `src/lib/talent-acquisition/status-badge.tsx`
+    (`StatusBadge`) instead of duplicating a fourth time, so the board card,
+    board drawer, and candidate detail page all render it identically now.
+  - **[P2, theming] Column container radius (8px) didn't match `DESIGN.md`'s
+    own container-radius rule (12px)** — the nested candidate `Card`s
+    already used 12px. `rounded-t-lg`/`rounded-b-lg` → `rounded-t-xl`/
+    `rounded-b-xl` in `board-client.tsx`.
+  - **[P2, accessibility] Search input had no real accessible label** beyond
+    its placeholder — added `aria-label="Search candidates"`.
+  - Verified live via Playwright MCP before and after, at 1440px and 375px:
+    confirmed both theming fixes render correctly (temporarily backdated a
+    real candidate's `last_action_at` via direct REST to force a live
+    "soon" status, reverted afterward), zero console errors, and explicitly
+    re-confirmed the board's custom scroll-position indicator from the
+    earlier scrollbar-visibility fix still renders correctly at 375px — no
+    regression. Re-ran the deterministic `impeccable detect` scanner on
+    every touched file before and after: zero findings both times.
 ### Added
 - **Back-to-board button on `/talent-acquisition/roles`.** A styled
   `Button` (`variant="outline"`, `size="sm"`), rendered as a `Link` to

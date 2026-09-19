@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useTransition } from "react";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -17,17 +16,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 import {
   BOARD_STAGES,
   type CandidateStatus,
   type NextAction,
 } from "@/lib/talent-acquisition/cadence";
 import { updateCandidateStage } from "@/lib/talent-acquisition/candidates-actions";
-import {
-  STATUS_BADGE_LABELS,
-  STATUS_BADGE_STYLES,
-} from "@/lib/talent-acquisition/status-styles";
+import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import type { BoardCandidate } from "./board-client";
 
 export function CandidateDrawer({
@@ -89,9 +84,7 @@ export function CandidateDrawer({
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
               Next action
             </span>
-            <Badge className={cn("w-fit", STATUS_BADGE_STYLES[status])}>
-              {STATUS_BADGE_LABELS[status](action)}
-            </Badge>
+            <StatusBadge status={status} action={action} className="w-fit" />
             <p className="text-sm">{action.label}</p>
           </div>
 
