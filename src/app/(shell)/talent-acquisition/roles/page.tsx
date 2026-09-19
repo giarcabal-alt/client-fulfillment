@@ -12,7 +12,9 @@ export default async function RolesPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("roles")
-    .select("id, title, job_description, status, candidates(count)")
+    .select(
+      "id, title, job_description, status, timezone_overlap, classification, candidates(count)"
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -24,6 +26,11 @@ export default async function RolesPage() {
     title: role.title as string,
     job_description: role.job_description as string | null,
     status: role.status as "open" | "filled" | "closed",
+    timezone_overlap: role.timezone_overlap as string | null,
+    classification: role.classification as
+      | "embedded_operator"
+      | "project_based"
+      | null,
     candidateCount: (role.candidates as { count: number }[] | null)?.[0]
       ?.count ?? 0,
   }));

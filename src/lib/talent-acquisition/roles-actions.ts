@@ -8,6 +8,9 @@ export type RoleActionState = { error: string | null };
 const ROLE_STATUSES = ["open", "filled", "closed"] as const;
 type RoleStatus = (typeof ROLE_STATUSES)[number];
 
+const ROLE_CLASSIFICATIONS = ["embedded_operator", "project_based"] as const;
+type RoleClassification = (typeof ROLE_CLASSIFICATIONS)[number];
+
 const ROLES_PATH = "/talent-acquisition/roles";
 
 // Every action re-derives the user server-side via getUser() (never
@@ -32,9 +35,19 @@ export async function createRole(
 ): Promise<RoleActionState> {
   const title = formData.get("title");
   const jobDescription = formData.get("job_description");
+  const timezoneOverlap = formData.get("timezone_overlap");
+  const classification = formData.get("classification");
 
   if (typeof title !== "string" || !title.trim()) {
     return { error: "Title is required." };
+  }
+
+  if (
+    typeof classification === "string" &&
+    classification &&
+    !ROLE_CLASSIFICATIONS.includes(classification as RoleClassification)
+  ) {
+    return { error: "Choose a valid classification." };
   }
 
   try {
@@ -44,6 +57,14 @@ export async function createRole(
       job_description:
         typeof jobDescription === "string" && jobDescription.trim()
           ? jobDescription.trim()
+          : null,
+      timezone_overlap:
+        typeof timezoneOverlap === "string" && timezoneOverlap.trim()
+          ? timezoneOverlap.trim()
+          : null,
+      classification:
+        typeof classification === "string" && classification
+          ? classification
           : null,
     });
     if (error) throw error;
@@ -95,6 +116,53 @@ export async function updateRoleJobDescription(
   } catch (error) {
     console.error("Failed to update role job description:", error);
     return { error: "Couldn't save the job description. Please try again." };
+  }
+
+  revalidatePath(ROLES_PATH);
+  return { error: null };
+}
+
+export async function updateRoleTimezoneOverlap(
+  id: string,
+  timezoneOverlap: string
+): Promise<RoleActionState> {
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("roles")
+      .update({ timezone_overlap: timezoneOverlap.trim() || null })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update role timezone overlap:", error);
+    return { error: "Couldn't save the timezone overlap. Please try again." };
+  }
+
+  revalidatePath(ROLES_PATH);
+  return { error: null };
+}
+
+export async function updateRoleClassification(
+  id: string,
+  classification: string | null
+): Promise<RoleActionState> {
+  if (
+    classification !== null &&
+    !ROLE_CLASSIFICATIONS.includes(classification as RoleClassification)
+  ) {
+    return { error: "Classification must be Embedded Operator or Project-Based." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("roles")
+      .update({ classification })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update role classification:", error);
+    return { error: "Couldn't save the classification. Please try again." };
   }
 
   revalidatePath(ROLES_PATH);

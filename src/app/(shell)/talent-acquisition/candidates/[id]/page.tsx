@@ -57,7 +57,7 @@ export default async function CandidateDetailPage({
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -119,6 +119,8 @@ export default async function CandidateDetailPage({
     notes: candidateRow.notes as string | null,
     tags: candidateRow.tags as string | null,
     role_id: candidateRow.role_id as string | null,
+    source_platform: candidateRow.source_platform as string | null,
+    communication_rating: candidateRow.communication_rating as number | null,
   };
 
   const roles = (rolesData ?? []) as { id: string; title: string }[];

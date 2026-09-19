@@ -16,16 +16,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   deleteRole,
+  updateRoleClassification,
   updateRoleJobDescription,
   updateRoleStatus,
+  updateRoleTimezoneOverlap,
   updateRoleTitle,
 } from "@/lib/talent-acquisition/roles-actions";
+
+type RoleClassification = "embedded_operator" | "project_based";
 
 type Role = {
   id: string;
   title: string;
   job_description: string | null;
   status: "open" | "filled" | "closed";
+  timezone_overlap: string | null;
+  classification: RoleClassification | null;
   candidateCount: number;
 };
 
@@ -41,12 +47,30 @@ const STATUS_LABELS: Record<Role["status"], string> = {
   closed: "Closed",
 };
 
+const NO_CLASSIFICATION_VALUE = "none";
+
+const CLASSIFICATION_LABELS: Record<RoleClassification, string> = {
+  embedded_operator: "Embedded Operator",
+  project_based: "Project-Based",
+};
+
+const CLASSIFICATION_STYLES: Record<RoleClassification, string> = {
+  embedded_operator: "bg-ink-navy text-white",
+  project_based: "bg-sun-gold text-ink-navy",
+};
+
 export function RoleRow({ role }: { role: Role }) {
   const [title, setTitle] = useState(role.title);
   const [jobDescription, setJobDescription] = useState(
     role.job_description ?? ""
   );
   const [status, setStatus] = useState<Role["status"]>(role.status);
+  const [timezoneOverlap, setTimezoneOverlap] = useState(
+    role.timezone_overlap ?? ""
+  );
+  const [classification, setClassification] = useState(
+    role.classification ?? NO_CLASSIFICATION_VALUE
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -70,6 +94,35 @@ export function RoleRow({ role }: { role: Role }) {
       if (result.error) {
         setError(result.error);
         setJobDescription(role.job_description ?? "");
+      }
+    });
+  }
+
+  function saveTimezoneOverlap() {
+    if (timezoneOverlap.trim() === (role.timezone_overlap ?? "")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await updateRoleTimezoneOverlap(role.id, timezoneOverlap);
+      if (result.error) {
+        setError(result.error);
+        setTimezoneOverlap(role.timezone_overlap ?? "");
+      }
+    });
+  }
+
+  function saveClassification(next: string | null) {
+    if (!next || next === classification) return;
+    const previous = classification;
+    setClassification(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateRoleClassification(
+        role.id,
+        next === NO_CLASSIFICATION_VALUE ? null : next
+      );
+      if (result.error) {
+        setError(result.error);
+        setClassification(previous);
       }
     });
   }
@@ -123,11 +176,54 @@ export function RoleRow({ role }: { role: Role }) {
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={classification} onValueChange={saveClassification}>
+              <SelectTrigger size="sm" disabled={isPending}>
+                <SelectValue>
+                  {classification === NO_CLASSIFICATION_VALUE ? (
+                    <span className="text-sm text-muted-foreground">
+                      No classification
+                    </span>
+                  ) : (
+                    <Badge
+                      className={cn(
+                        CLASSIFICATION_STYLES[
+                          classification as RoleClassification
+                        ]
+                      )}
+                    >
+                      {
+                        CLASSIFICATION_LABELS[
+                          classification as RoleClassification
+                        ]
+                      }
+                    </Badge>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CLASSIFICATION_VALUE}>
+                  No classification
+                </SelectItem>
+                <SelectItem value="embedded_operator">
+                  Embedded Operator
+                </SelectItem>
+                <SelectItem value="project_based">Project-Based</SelectItem>
+              </SelectContent>
+            </Select>
             <span className="text-sm tabular-nums text-muted-foreground">
               {role.candidateCount}{" "}
               {role.candidateCount === 1 ? "candidate" : "candidates"}
             </span>
           </div>
+          <Input
+            value={timezoneOverlap}
+            onChange={(e) => setTimezoneOverlap(e.target.value)}
+            onBlur={saveTimezoneOverlap}
+            disabled={isPending}
+            placeholder="Timezone overlap, e.g. 4hrs PHT/EST"
+            aria-label="Timezone overlap"
+            className="max-w-sm"
+          />
           <Textarea
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}

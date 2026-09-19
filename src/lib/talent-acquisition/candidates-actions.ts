@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminUser } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
+import {
+  SOURCE_PLATFORMS,
+  type SourcePlatform,
+} from "@/lib/talent-acquisition/source-platforms";
 
 export type CandidateActionState = { error: string | null };
 
@@ -69,9 +73,18 @@ export async function createCandidate(
   const roleMode = formData.get("role_mode");
   const roleId = formData.get("role_id");
   const newRoleTitle = formData.get("new_role_title");
+  const sourcePlatform = formData.get("source_platform");
 
   if (typeof name !== "string" || !name.trim()) {
     return { error: "Name is required." };
+  }
+
+  if (
+    typeof sourcePlatform === "string" &&
+    sourcePlatform &&
+    !SOURCE_PLATFORMS.includes(sourcePlatform as SourcePlatform)
+  ) {
+    return { error: "Choose a valid source platform." };
   }
 
   if (roleMode !== "none" && roleMode !== "existing" && roleMode !== "new") {
@@ -122,6 +135,10 @@ export async function createCandidate(
       stage,
       notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
       tags: typeof tags === "string" && tags.trim() ? tags.trim() : null,
+      source_platform:
+        typeof sourcePlatform === "string" && sourcePlatform
+          ? sourcePlatform
+          : null,
     });
     if (error) throw error;
   } catch (error) {
@@ -258,6 +275,59 @@ export async function reassignCandidateRole(
 
   revalidatePath(BOARD_PATH);
   revalidatePath(ROLES_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateSourcePlatform(
+  id: string,
+  sourcePlatform: string | null
+): Promise<CandidateActionState> {
+  if (
+    sourcePlatform !== null &&
+    !SOURCE_PLATFORMS.includes(sourcePlatform as SourcePlatform)
+  ) {
+    return { error: "Choose a valid source platform." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ source_platform: sourcePlatform })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update candidate source platform:", error);
+    return { error: "Couldn't save the source. Please try again." };
+  }
+
+  revalidatePath(BOARD_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateCommunicationRating(
+  id: string,
+  rating: number | null
+): Promise<CandidateActionState> {
+  if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
+    return { error: "Rating must be 1–5." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ communication_rating: rating })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update candidate communication rating:", error);
+    return { error: "Couldn't save the rating. Please try again." };
+  }
+
+  revalidatePath(BOARD_PATH);
   revalidatePath(candidatePath(id));
   return { error: null };
 }

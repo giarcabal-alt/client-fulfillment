@@ -16,9 +16,11 @@ import {
   type CandidateActionState,
   type RoleMode,
 } from "@/lib/talent-acquisition/candidates-actions";
+import { SOURCE_PLATFORMS } from "@/lib/talent-acquisition/source-platforms";
 
 const NEW_ROLE_VALUE = "__new__";
 const NO_ROLE_VALUE = "none";
+const NO_SOURCE_VALUE = "none";
 
 const initialState: CandidateActionState = { error: null };
 
@@ -31,6 +33,7 @@ export function NewCandidateForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [roleChoice, setRoleChoice] = useState<string>(NO_ROLE_VALUE);
+  const [sourcePlatform, setSourcePlatform] = useState<string>(NO_SOURCE_VALUE);
 
   const roleMode: RoleMode =
     roleChoice === NO_ROLE_VALUE
@@ -50,6 +53,7 @@ export function NewCandidateForm({
     if (!result.error) {
       formRef.current?.reset();
       setRoleChoice(NO_ROLE_VALUE);
+      setSourcePlatform(NO_SOURCE_VALUE);
       onSuccess();
     }
     return result;
@@ -115,6 +119,33 @@ export function NewCandidateForm({
           id="new-candidate-tags"
           name="tags"
           placeholder="Comma-separated, e.g. backend, remote"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="new-candidate-source">Source (optional)</Label>
+        <Select
+          value={sourcePlatform}
+          onValueChange={(v) => v && setSourcePlatform(v)}
+        >
+          <SelectTrigger id="new-candidate-source" className="w-full">
+            <SelectValue>
+              {(value: string) => (value === NO_SOURCE_VALUE ? "None" : value)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_SOURCE_VALUE}>None</SelectItem>
+            {SOURCE_PLATFORMS.map((platform) => (
+              <SelectItem key={platform} value={platform}>
+                {platform}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <input
+          type="hidden"
+          name="source_platform"
+          value={sourcePlatform === NO_SOURCE_VALUE ? "" : sourcePlatform}
         />
       </div>
 

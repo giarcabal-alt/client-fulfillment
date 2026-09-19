@@ -16,12 +16,17 @@ import {
 } from "@/lib/talent-acquisition/cadence";
 import {
   reassignCandidateRole,
+  updateCandidateCommunicationRating,
   updateCandidateNotes,
+  updateCandidateSourcePlatform,
   updateCandidateStage,
   updateCandidateTags,
 } from "@/lib/talent-acquisition/candidates-actions";
+import { SOURCE_PLATFORMS } from "@/lib/talent-acquisition/source-platforms";
 
 const NO_ROLE_VALUE = "none";
+const NO_SOURCE_VALUE = "none";
+const NO_RATING_VALUE = "unrated";
 
 type Candidate = {
   id: string;
@@ -29,6 +34,8 @@ type Candidate = {
   notes: string | null;
   tags: string | null;
   role_id: string | null;
+  source_platform: string | null;
+  communication_rating: number | null;
 };
 
 export function CandidateDetailForm({
@@ -44,6 +51,14 @@ export function CandidateDetailForm({
   );
   const [notes, setNotes] = useState(candidate.notes ?? "");
   const [tags, setTags] = useState(candidate.tags ?? "");
+  const [sourcePlatform, setSourcePlatform] = useState(
+    candidate.source_platform ?? NO_SOURCE_VALUE
+  );
+  const [communicationRating, setCommunicationRating] = useState(
+    candidate.communication_rating != null
+      ? String(candidate.communication_rating)
+      : NO_RATING_VALUE
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -96,6 +111,48 @@ export function CandidateDetailForm({
     });
   }
 
+  function handleSourceChange(next: string | null) {
+    if (!next || next === sourcePlatform) return;
+    const previous = sourcePlatform;
+    setSourcePlatform(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateSourcePlatform(
+        candidate.id,
+        next === NO_SOURCE_VALUE ? null : next
+      );
+      if (result.error) {
+        setError(result.error);
+        setSourcePlatform(previous);
+      }
+    });
+  }
+
+  function handleRatingChange(next: string | null) {
+    if (!next || next === communicationRating) return;
+    const previous = communicationRating;
+    setCommunicationRating(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateCommunicationRating(
+        candidate.id,
+        next === NO_RATING_VALUE ? null : Number(next)
+      );
+      if (result.error) {
+        setError(result.error);
+        setCommunicationRating(previous);
+      }
+    });
+  }
+
+  function sourceLabelFor(value: string) {
+    return value === NO_SOURCE_VALUE ? "Not set" : value;
+  }
+
+  function ratingLabelFor(value: string) {
+    return value === NO_RATING_VALUE ? "Not rated" : `${value}/5`;
+  }
+
   function roleLabelFor(value: string) {
     if (value === NO_ROLE_VALUE) return "No role — Talent Pool";
     return roles.find((role) => role.id === value)?.title ?? value;
@@ -145,6 +202,58 @@ export function CandidateDetailForm({
               {roles.map((role) => (
                 <SelectItem key={role.id} value={role.id}>
                   {role.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Source
+          </span>
+          <Select
+            value={sourcePlatform}
+            onValueChange={handleSourceChange}
+            disabled={isPending}
+          >
+            <SelectTrigger>
+              <SelectValue>
+                {(value: string) => `Source: ${sourceLabelFor(value)}`}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_SOURCE_VALUE}>Not set</SelectItem>
+              {SOURCE_PLATFORMS.map((platform) => (
+                <SelectItem key={platform} value={platform}>
+                  {platform}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Communication
+          </span>
+          <Select
+            value={communicationRating}
+            onValueChange={handleRatingChange}
+            disabled={isPending}
+          >
+            <SelectTrigger>
+              <SelectValue>
+                {(value: string) => `Communication: ${ratingLabelFor(value)}`}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_RATING_VALUE}>Not rated</SelectItem>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}/5
                 </SelectItem>
               ))}
             </SelectContent>

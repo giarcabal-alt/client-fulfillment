@@ -1,6 +1,42 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- **Four new fields: `roles.timezone_overlap`/`classification`, `candidates.source_platform`/`communication_rating`.**
+  New migration `20260919110000_add_role_and_candidate_fields.sql` —
+  `roles.timezone_overlap` (text, nullable, free text e.g. "4hrs
+  PHT/EST"), `roles.classification` (text, nullable, `check` constrained
+  to `'embedded_operator'`/`'project_based'`), `candidates.source_platform`
+  (text, nullable — JobStreet/Kalibrr/OnlineJobs.ph/LinkedIn/Bossjob/
+  Referral/Other), `candidates.communication_rating` (int, nullable,
+  `check (between 1 and 5)`). Applied by the user via the established
+  `supabase db push --db-url` workaround (this session has no DB
+  password, only the API keys), confirmed live afterward via a REST
+  check on both tables, and confirmed the check constraint actually
+  rejects an invalid `classification` value. No RLS/grant changes needed
+  — both tables' existing "update within org" policies and the blanket
+  `ALTER DEFAULT PRIVILEGES` grant already cover any column added to
+  them. `timezone_overlap`/`classification` are on the roles create/edit
+  form and row (`new-role-form.tsx`/`role-row.tsx`), the latter shown as
+  a small colored `Badge`. `source_platform` is a dropdown on the New
+  Candidate dialog and the candidate detail page; `communication_rating`
+  is a 1–5 dropdown on the detail page only (not required at creation —
+  it's normally set after a phone screen) — both render as plain text
+  inside their `Select` trigger ("Source: Kalibrr", "Communication:
+  4/5"), not a colored badge, per the task's explicit ask. Hit and fixed
+  a real bug: `SOURCE_PLATFORMS` was originally exported as a plain
+  `const` from `candidates-actions.ts` (a `"use server"` file) — that
+  file's transform only preserves async-function exports for the client
+  reference and silently drops everything else, so it type-checked and
+  built cleanly but threw `SOURCE_PLATFORMS.map is not a function` the
+  first time a client component actually rendered with it. Fixed by
+  moving it to its own plain module, `src/lib/talent-acquisition/
+  source-platforms.ts`. Verified live end-to-end: created and edited
+  roles with both new fields (persisted after reload); created a
+  candidate with a source platform via the dialog and confirmed it
+  carried through to the detail page; set a communication rating on the
+  detail page and confirmed it persisted after reload. Test data cleaned
+  up afterward.
 ### Changed
 - **Sidebar layout follow-up (cosmetic, no schema/Server Action changes).**
   Two changes to the sidebar built in the previous entry. (1) The
