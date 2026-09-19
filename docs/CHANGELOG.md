@@ -1,6 +1,38 @@
 # Changelog
 
 ## [Unreleased]
+### Security
+- **Role-based authorization foundation — step 1 of 4 toward an admin
+  page + candidate-assignment feature. Schema and a helper only, no admin
+  UI yet. This is a genuine security-model shift, not just a feature
+  add**: every authorization check in this app so far has been
+  org-membership-only (RLS's `org_id = current_org_id()`); this adds the
+  app's first role-based (admin vs. member) concept. Two new migrations
+  — **⚠️ written but NOT yet applied**, no `SUPABASE_ACCESS_TOKEN`/pooler
+  connection string was available in the session that wrote them, and
+  `supabase link` is the known-broken workaround (`PROJECT_STATE.md` §3):
+  `profiles.role` (`text`, `check (role in ('admin','member'))`, default
+  `'member'`), and `candidates.assigned_to` (`uuid references
+  profiles(id)`, nullable, indexed — unused until the reassignment
+  feature itself is built). The `profiles.role` migration also adds a
+  `before update` trigger, `prevent_self_role_escalation`: the existing
+  "profiles: update own row" RLS policy has no column-level restriction,
+  so without this trigger any authenticated user could `PATCH` their own
+  `role` to `'admin'` via a direct Supabase REST call, entirely bypassing
+  this app's own Server Actions (which never expose a raw arbitrary-column
+  update). The trigger blocks that specific attack vector while still
+  allowing a service-role/SQL-Editor session through (`auth.uid()` is null
+  there) — which is what makes the manual first-admin bootstrap possible,
+  since there's no admin UI to do it any other way yet. New
+  `src/lib/auth/get-user-role.ts` (`getUserRole()`, `requireAdmin()`) —
+  every future admin-only Server Action must call this and check the
+  result explicitly inside the action itself, not just hide the UI that
+  links to it, per SECURITY.md's authorization-beyond-RLS rule. Checked
+  grants: none needed, both tables are already covered by the existing
+  blanket table-level grant (new columns on an existing granted table
+  don't need a fresh grant). **⚠️ No way to set the first admin through
+  the app** — see `PROJECT_STATE.md` §4/§5 for the exact manual SQL.
+
 ### Changed
 - Mobile responsiveness pass across the whole shell and every existing
   page. The sidebar (`src/app/(shell)/layout.tsx`) was a fixed `w-64`
