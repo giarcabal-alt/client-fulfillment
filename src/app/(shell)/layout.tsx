@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { MobileNav } from "@/components/shell/mobile-nav";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { Wordmark } from "@/components/shell/wordmark";
 import { signOut } from "./actions";
@@ -19,8 +20,8 @@ export default async function ShellLayout({
   }
 
   return (
-    <div className="flex min-h-full flex-1">
-      <aside className="flex w-64 shrink-0 flex-col justify-between bg-sidebar p-4 text-sidebar-foreground">
+    <div className="flex min-h-full flex-1 flex-col md:flex-row">
+      <aside className="hidden w-64 shrink-0 flex-col justify-between bg-sidebar p-4 text-sidebar-foreground md:flex">
         <div>
           <Wordmark />
           <div className="mb-6 font-display text-lg">Client Fulfillment App</div>
@@ -35,6 +36,7 @@ export default async function ShellLayout({
           </button>
         </form>
       </aside>
+      <MobileNav />
       <main className="min-w-0 flex-1 bg-background">{children}</main>
     </div>
   );

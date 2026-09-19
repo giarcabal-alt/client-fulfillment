@@ -29,7 +29,7 @@ export default async function RolesPage() {
   }));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
       <div>
         <h1 className="text-2xl">Roles</h1>
         <p className="mt-1 text-muted-foreground">

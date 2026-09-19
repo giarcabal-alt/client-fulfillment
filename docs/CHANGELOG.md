@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 ### Changed
+- Mobile responsiveness pass across the whole shell and every existing
+  page. The sidebar (`src/app/(shell)/layout.tsx`) was a fixed `w-64`
+  always-visible `<aside>` with no responsive behavior at all; below `md`
+  it's now hidden in favor of a new `src/components/shell/mobile-nav.tsx`
+  — a compact top bar (monogram + app name + hamburger) that opens the same
+  `SidebarNav` content in a slide-out `Sheet`. Root padding on the board,
+  roles, candidate detail, and settings pages changed from a flat `p-8` to
+  `p-4 sm:p-8` so phone-width viewports get a sane gutter instead of 64px
+  of desktop padding. The board's and candidate detail page's title-row
+  layouts (name/title next to a badge or link) got `flex-wrap` + `min-w-0`
+  on the growable side so long content wraps instead of overflowing at
+  narrow widths — this turned out to be the same flex-shrink bug category
+  as the board's `min-w-0` scrolling fix, just showing up on ordinary
+  content rows instead of a scroll container (see `PROJECT_STATE.md` §3).
+  Verified live via Playwright MCP at 1440px and 375px for all four pages
+  (shell/board/roles/candidate-detail), plus the "+ New Candidate" dialog
+  and the board's candidate drawer, which were already responsive with no
+  changes needed.
+- Fixed a real bug surfaced while building the above: Base UI's `Sheet`
+  (the mobile nav menu) didn't close itself after tapping a nav link
+  inside it — there's no implicit auto-close on navigation the way some
+  UI kits provide. Made it a controlled component that closes on route
+  change via `usePathname`, with the state reset done **during render**
+  (comparing against a tracked last-seen pathname) rather than in a
+  `useEffect`, since the effect version trips this repo's
+  `react-hooks/set-state-in-effect` ESLint error. See the Base-UI-Sheet
+  gotcha added to `PROJECT_STATE.md` §3.
 - Board columns are narrower so all seven fit on a typical desktop viewport
   without horizontal scrolling: column width `w-64 shrink-0` (256px, fixed)
   → `min-w-[140px] flex-1`, the row's `gap-4` → `gap-3`. Sizing only — no
@@ -30,6 +57,24 @@
   state correctly.
 
 ### Added
+- `/settings` (app-level, outside `talent-acquisition/`): company name
+  (`org_settings.company_name`, org-scoped — any signed-in user can edit
+  it) and the signed-in user's own display name (`profiles.display_name`,
+  restricted by RLS to the caller's own row), both save-on-blur following
+  the same pattern as `role-row.tsx`/`candidate-detail-form.tsx`. New
+  `src/lib/settings-actions.ts` (`updateCompanyName`, `updateDisplayName`).
+  Checked grants: no new migration needed, both tables already covered by
+  the existing `ALTER DEFAULT PRIVILEGES` migration. Added a real
+  "Settings" nav link to `SidebarNav` (previously only the one Talent
+  Acquisition Desk item plus the disabled Onboarding/Kickoff placeholders).
+- `loading.tsx` for the board, roles, candidate detail, and settings
+  routes — plain centered muted text, matching this app's no-spinner
+  tone. None of the four routes had one before, so a slow fetch during
+  navigation showed a blank page instead of any feedback. The existing
+  empty states from earlier prompts (roles: "No roles yet…", board:
+  "No one here yet" per column, candidate detail's job-description/
+  next-action/history empty text) were checked and are still correct —
+  no changes needed there.
 - `/talent-acquisition/candidates/[id]`: the full candidate detail page —
   stage dropdown (`updateCandidateStage`), role reassignment dropdown
   including "No role — Talent Pool" (`reassignCandidateRole`), notes and

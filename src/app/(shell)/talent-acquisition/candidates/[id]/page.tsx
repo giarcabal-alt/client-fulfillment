@@ -108,7 +108,7 @@ export default async function CandidateDetailPage({
   });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
       <div>
         <Link
           href="/talent-acquisition/board"
@@ -116,9 +116,9 @@ export default async function CandidateDetailPage({
         >
           ← Back to board
         </Link>
-        <div className="mt-2 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl">{candidate.name}</h1>
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl break-words">{candidate.name}</h1>
             <p className="mt-1 text-muted-foreground">
               {role?.title ?? "No role set"}
             </p>

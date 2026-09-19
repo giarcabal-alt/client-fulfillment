@@ -4,31 +4,43 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const activeItem = {
-  label: "Talent Acquisition Desk",
-  href: "/talent-acquisition/board",
-  match: "/talent-acquisition",
-};
+const navItems = [
+  {
+    label: "Talent Acquisition Desk",
+    href: "/talent-acquisition/board",
+    match: "/talent-acquisition",
+  },
+  {
+    label: "Settings",
+    href: "/settings",
+    match: "/settings",
+  },
+];
 
 const comingSoonItems = ["Onboarding", "Kickoff"];
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const isActive = pathname.startsWith(activeItem.match);
 
   return (
     <nav className="flex flex-col gap-1">
-      <Link
-        href={activeItem.href}
-        className={cn(
-          "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-          isActive
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        )}
-      >
-        {activeItem.label}
-      </Link>
+      {navItems.map((item) => {
+        const isActive = pathname.startsWith(item.match);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
       {comingSoonItems.map((label) => (
         <div
           key={label}

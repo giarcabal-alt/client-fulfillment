@@ -39,9 +39,9 @@ export default async function BoardPage() {
   });
 
   return (
-    <div className="flex h-full flex-col gap-4 p-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <div className="flex h-full flex-col gap-4 p-4 sm:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl">Talent Acquisition Desk</h1>
           <p className="mt-1 text-muted-foreground">
             The candidate pipeline, Talent Pool included.
