@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -38,6 +40,13 @@ export default async function RolesPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
       <div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mb-3"
+          nativeButton={false}
+          render={<Link href="/talent-acquisition/board">← Back to board</Link>}
+        />
         <h1 className="text-2xl">Roles</h1>
         <p className="mt-1 text-muted-foreground">
           Open requisitions candidates can be assigned to.

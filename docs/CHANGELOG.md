@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 ### Added
+- **Back-to-board button on `/talent-acquisition/roles`.** A styled
+  `Button` (`variant="outline"`, `size="sm"`), rendered as a `Link` to
+  `/talent-acquisition/board`, placed directly above the "Roles"
+  heading — matching the `outline`-styled `Delete` button already used
+  elsewhere on this page, not a default unstyled link. Hit and fixed a
+  real Base UI runtime error: `Button`'s underlying primitive defaults
+  `nativeButton` to `true` and throws a console error if `render` swaps
+  in something other than an actual `<button>` (here, a `Link`, which
+  renders an `<a>`) without also passing `nativeButton={false}` — it
+  type-checks and builds cleanly, only surfacing as a console error the
+  first time the page actually renders. Verified live at desktop and
+  375px mobile widths: renders correctly positioned, and clicking it
+  navigates to the board.
 - **Four new fields: `roles.timezone_overlap`/`classification`, `candidates.source_platform`/`communication_rating`.**
   New migration `20260919110000_add_role_and_candidate_fields.sql` —
   `roles.timezone_overlap` (text, nullable, free text e.g. "4hrs
