@@ -195,7 +195,7 @@ export default async function CandidateDetailPage({
                   key={h.id}
                   className="flex items-baseline justify-between gap-4 text-sm"
                 >
-                  <span>{h.label}</span>
+                  <span className="min-w-0 flex-1">{h.label}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {new Date(h.occurred_at).toLocaleDateString(undefined, {
                       month: "short",

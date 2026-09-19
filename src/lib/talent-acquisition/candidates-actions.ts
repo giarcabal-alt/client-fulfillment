@@ -20,6 +20,7 @@ export type RoleMode = "none" | "existing" | "new";
 
 const BOARD_PATH = "/talent-acquisition/board";
 const ROLES_PATH = "/talent-acquisition/roles";
+const candidatePath = (id: string) => `/talent-acquisition/candidates/${id}`;
 
 // Every action re-derives the user server-side via getUser() (never
 // getSession(), never a client-passed id) per SECURITY.md. These are plain
@@ -186,6 +187,7 @@ export async function updateCandidateStage(
   }
 
   revalidatePath(BOARD_PATH);
+  revalidatePath(candidatePath(id));
   return { error: null };
 }
 
@@ -206,6 +208,7 @@ export async function updateCandidateNotes(
   }
 
   revalidatePath(BOARD_PATH);
+  revalidatePath(candidatePath(id));
   return { error: null };
 }
 
@@ -226,6 +229,7 @@ export async function updateCandidateTags(
   }
 
   revalidatePath(BOARD_PATH);
+  revalidatePath(candidatePath(id));
   return { error: null };
 }
 
@@ -253,5 +257,6 @@ export async function reassignCandidateRole(
 
   revalidatePath(BOARD_PATH);
   revalidatePath(ROLES_PATH);
+  revalidatePath(candidatePath(id));
   return { error: null };
 }

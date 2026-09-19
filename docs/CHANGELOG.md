@@ -57,6 +57,29 @@
   `children` render-prop mapping value → label. Added a `roleLabelFor()`
   helper and passed it to `SelectValue` as that render prop; the submitted
   `role_id` (the UUID) was unaffected.
+- Follow-up to the candidate detail page: re-checked grants (still none
+  needed — `profiles`/`org_settings`/`candidate_history` are all covered by
+  the existing `ALTER DEFAULT PRIVILEGES` migration, confirmed by reading
+  the migration directly, not just re-asserting the earlier note) and
+  ported-script fidelity (`scripts.ts` diffed line-by-line against the
+  prototype's `scriptText()` in `recruiting-desk.html` — verbatim match).
+  Added `revalidatePath` for the candidate's own detail path
+  (`/talent-acquisition/candidates/[id]`) to `updateCandidateStage`,
+  `updateCandidateNotes`, `updateCandidateTags`, and
+  `reassignCandidateRole` in `candidates-actions.ts` — these only
+  revalidated the board path before, so the page's own History log and
+  next-action display wouldn't reflect an edit made from this page without
+  a hard refresh. Fixed the History list's date column getting clipped by
+  the card's `overflow-hidden` at narrow widths (missing `min-w-0 flex-1`
+  on the label span let it push the date past the card edge instead of
+  wrapping — same category of flex-shrink bug as the board's `min-w-0`
+  gotcha, see `PROJECT_STATE.md` §3). Verified live via Playwright MCP
+  (manual-login-pause convention): screenshotted a real candidate
+  (Gil Demiar) at 1440px — clean, no cramping/misalignment — and confirmed
+  the page has no internal scrollable region (the only `overflow-y: auto`
+  element is the empty notes `<textarea>`, not actually overflowing), so
+  the board's custom-scroll-indicator pattern doesn't apply here; normal
+  full-page scroll is correct as-is.
 - A "+ New Candidate" button on the board opens a `Dialog` form
   (`new-candidate-form.tsx`) calling `createCandidate` — name, an optional
   notes field and a comma-separated tags field (matching the prototype's
