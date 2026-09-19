@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "@/app/(shell)/actions";
@@ -12,13 +13,20 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Greeting } from "./greeting";
 import { SidebarNav } from "./sidebar-nav";
 import { Wordmark } from "./wordmark";
 
 // Below `md`, the always-visible sidebar (layout.tsx) is hidden in favor of
 // this compact top bar + slide-out Sheet, so the shell doesn't eat most of
 // a phone-width viewport with fixed-width nav.
-export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export function MobileNav({
+  isAdmin = false,
+  displayName = null,
+}: {
+  isAdmin?: boolean;
+  displayName?: string | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
@@ -35,14 +43,17 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <header className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
-      <div className="flex items-center gap-2">
+      <Link
+        href="/talent-acquisition/board"
+        className="flex items-center gap-2 transition-opacity hover:opacity-80"
+      >
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-work-blue text-[10px] font-bold text-white">
           us.
         </span>
         <span className="font-display text-sm text-sidebar-foreground">
           Client Fulfillment App
         </span>
-      </div>
+      </Link>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           render={
@@ -65,9 +76,7 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
               <SheetTitle className="sr-only">Navigation</SheetTitle>
             </SheetHeader>
             <Wordmark />
-            <div className="mb-6 font-display text-lg">
-              Client Fulfillment App
-            </div>
+            <Greeting displayName={displayName} />
             <SidebarNav isAdmin={isAdmin} />
           </div>
           <form action={signOut}>

@@ -2,6 +2,41 @@
 
 ## [Unreleased]
 ### Security
+- **Sidebar polish — step 4 of 4 on the admin/assignment feature (closes it out).**
+  UI-only, no schema or Server Action changes. Three parts: (1) the
+  sidebar and mobile nav now show the signed-in user's own
+  `profiles.display_name` — previously the only identity shown anywhere
+  in the shell was the org wordmark ("upscalesupport") and a static
+  "Client Fulfillment App" label, with no per-user information at all.
+  `layout.tsx` fetches it via a plain own-row `SELECT` (already covered
+  by the existing "profiles: select own row" RLS policy — no new grant)
+  and passes it to both `layout.tsx`'s desktop sidebar and
+  `mobile-nav.tsx`'s slide-out `Sheet`. (2) A new `Greeting` component
+  (`src/components/shell/greeting.tsx`) shows one of eight greetings —
+  "What's up", "Aloha", "Hola", "Mabuhay", "Kumusta", "Good night",
+  "Magandang gabi", "Buon giorno" — picked at random next to the display
+  name, small and plain per DESIGN_SYSTEM.md's tone. Hit a real
+  hydration mismatch building this (picking randomly in `useState`'s
+  lazy initializer runs once during SSR and again on the client with a
+  different `Math.random()` result); fixed with `suppressHydrationWarning`
+  on just the greeting text node, the correct tool for intentional
+  client-only randomness, rather than restructuring into an
+  effect-based two-render pattern (which would have tripped this repo's
+  `react-hooks/set-state-in-effect` ESLint error, the same rule
+  `mobile-nav.tsx` already works around for its Sheet-close logic). (3)
+  `Wordmark` (`src/components/shell/wordmark.tsx`) is now a real
+  `<Link href="/talent-acquisition/board">` with a hover state, in both
+  the desktop sidebar and the mobile top bar/Sheet, instead of static
+  markup — the board is the closest thing this app has to a home route
+  (there's no `src/app/page.tsx` at `/`), matching `SidebarNav`'s own
+  default destination. Verified live with two accounts: non-admin and
+  admin each see their own distinct display name and a randomly-differing
+  greeting (confirming genuinely per-user, per-load values, not a shared
+  or cached one); the admin additionally sees the "Admin" nav link;
+  clicking the logo navigates correctly from `/settings` and from the
+  board itself, at both desktop and 390px mobile width, including from
+  inside the mobile Sheet. Checked grants: none needed. This closes out
+  all 4 steps of the admin/assignment feature.
 - **Candidate assignment — step 3 of 4 on the admin/assignment feature.**
   Surfaces `candidates.assigned_to` (added in step 1) on
   `/talent-acquisition/candidates/[id]`: everyone sees who a candidate is

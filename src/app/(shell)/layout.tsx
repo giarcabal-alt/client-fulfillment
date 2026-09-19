@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
+import { Greeting } from "@/components/shell/greeting";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { SidebarNav } from "@/components/shell/sidebar-nav";
 import { Wordmark } from "@/components/shell/wordmark";
@@ -30,12 +31,22 @@ export default async function ShellLayout({
   const role = await getUserRole();
   const isAdmin = role === "admin";
 
+  // Own display_name, not the org name — the sidebar previously only ever
+  // showed "upscalesupport" (the org wordmark) and the static app title,
+  // with no per-user identity visible anywhere in the shell.
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const displayName = (profileRow?.display_name as string | null) ?? null;
+
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       <aside className="hidden w-64 shrink-0 flex-col justify-between bg-sidebar p-4 text-sidebar-foreground md:flex">
         <div>
           <Wordmark />
-          <div className="mb-6 font-display text-lg">Client Fulfillment App</div>
+          <Greeting displayName={displayName} />
           <SidebarNav isAdmin={isAdmin} />
         </div>
         <form action={signOut}>
@@ -47,7 +58,7 @@ export default async function ShellLayout({
           </button>
         </form>
       </aside>
-      <MobileNav isAdmin={isAdmin} />
+      <MobileNav isAdmin={isAdmin} displayName={displayName} />
       <main className="min-w-0 flex-1 bg-background">{children}</main>
     </div>
   );
