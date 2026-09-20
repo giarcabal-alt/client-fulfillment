@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 ### Fixed
+- **Impeccable `audit` + `polish` pass on `/settings`.** `audit` scored
+  18/20 (Excellent, borderline — Accessibility was the drag). Findings
+  shown to the user before any change, per convention: **[P1,
+  accessibility/UX]** the two save-on-blur fields (`CompanyNameField`,
+  `DisplayNameField` in `settings-form.tsx`) gave zero feedback on a
+  successful save — no visual confirmation, no `aria-live` announcement,
+  nothing — while only the error path rendered anything. Actually
+  triggered this live: typed a new company name, blurred, and confirmed
+  via reload that the save genuinely persisted server-side, but the UI
+  showed no change at all at the moment it happened, making success and
+  "still in flight" indistinguishable. **[P2, accessibility]** the helper
+  text under each field ("Shown to teammates across the org...", "Signed
+  as the recruiter...") and the error message were both only visually
+  adjacent to their `Input`, not programmatically associated — confirmed
+  live via `aria-describedby` being `null` on both inputs. Fix: added a
+  transient "Saved" confirmation in `growth-green` (DESIGN.md's
+  success-only color) after a successful save, backed by an always-mounted
+  `sr-only` `role="status"`/`aria-live="polite"` region (mounted once,
+  not created fresh on each save, since a screen reader can miss a live
+  region that doesn't exist yet at the moment content changes); wired each
+  input's `aria-describedby` to its helper text (and error text when
+  present) with stable ids, and marked the error `<p>` `role="alert"` so
+  it's announced without requiring focus to move. Verified live at 1280px
+  and 375px by actually triggering real saves (not just checking static
+  appearance) on both fields at both widths — screenshotted the visible
+  "Saved" text appearing in Growth Green after a real blur-triggered save
+  round-trip, and confirmed via the DOM that the `sr-only` status region's
+  text updates on the same event. Confirmed `aria-describedby` now
+  resolves to the helper text's `id` on both inputs. Full keyboard
+  Tab-through of both fields at both widths shows the same established
+  Work Blue ring. Any test values typed during verification (temporarily
+  extended the "Saved" message's 2s auto-dismiss to 15s to capture a real
+  screenshot of it, then reverted) were reverted back to their original
+  values afterward, confirmed via reload.
 - **Impeccable `audit` + `polish` pass on the sidebar — desktop `layout.tsx`/`sidebar-nav.tsx`/`wordmark.tsx` and the mobile slide-out nav (`mobile-nav.tsx`).**
   `audit` scored 19/20 (Excellent). Findings shown to the user before any
   change, per convention: **[P2, accessibility/consistency]** every nav
