@@ -45,7 +45,7 @@ export function MobileNav({
     <header className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 text-sidebar-foreground md:hidden">
       <Link
         href="/talent-acquisition/board"
-        className="flex items-center gap-2 transition-opacity hover:opacity-80"
+        className="flex items-center gap-2 rounded-md outline-none transition-opacity hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-work-blue text-[10px] font-bold text-white">
           us.
@@ -83,7 +83,7 @@ export function MobileNav({
             <form action={signOut}>
               <button
                 type="submit"
-                className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                className="rounded-md text-sm text-sidebar-foreground/70 outline-none hover:text-sidebar-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 Sign out
               </button>

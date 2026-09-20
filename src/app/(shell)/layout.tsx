@@ -53,7 +53,7 @@ export default async function ShellLayout({
           <form action={signOut}>
             <button
               type="submit"
-              className="text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              className="rounded-md text-sm text-sidebar-foreground/70 outline-none hover:text-sidebar-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               Sign out
             </button>

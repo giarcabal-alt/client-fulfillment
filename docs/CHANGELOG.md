@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 ### Fixed
+- **Impeccable `audit` + `polish` pass on the sidebar — desktop `layout.tsx`/`sidebar-nav.tsx`/`wordmark.tsx` and the mobile slide-out nav (`mobile-nav.tsx`).**
+  `audit` scored 19/20 (Excellent). Findings shown to the user before any
+  change, per convention: **[P2, accessibility/consistency]** every nav
+  link (module links, Settings, Admin), the logo/wordmark link (both the
+  shared `Wordmark` component and the mobile top bar's own inline copy),
+  and both `Sign out` buttons (desktop sidebar + mobile Sheet) relied on
+  the browser's thin default focus outline rather than the app's
+  deliberate `focus-visible:ring-3 focus-visible:ring-ring/50` box-shadow
+  ring every other interactive element uses — the same class of gap
+  already found and fixed once on the board's drawer "View full profile
+  →" link, and noticeably fainter here against the dark Ink Navy sidebar
+  background specifically. Explicitly checked three things the user
+  flagged as easy to get wrong, and found all three already correct: the
+  disabled "Coming soon" items (Onboarding, Kickoff) are plain `<div>`s
+  with no `tabindex`, confirmed live that Tab skips them entirely rather
+  than landing on a dead control; the module/Settings divider is a real
+  `<hr>`, confirmed live in the accessibility tree as a `separator` node,
+  not just a styled line; the logo (`link "us. upscalesupport"`) and
+  Sign out (`button "Sign out"`) both already had clear accessible names.
+  Fix: added `outline-none focus-visible:ring-3 focus-visible:ring-ring/50`
+  to `sidebar-nav.tsx`'s shared `navLink()`, `wordmark.tsx`, the mobile
+  top bar's inline logo link, and both `Sign out` buttons — no new
+  tokens, reusing the exact ring treatment already established elsewhere.
+  Verified live at 1280px and 375px: re-ran the full keyboard Tab-through
+  on both the desktop sidebar and the mobile Sheet (logo, active/inactive
+  nav items — confirming disabled items are still correctly skipped —
+  Settings, Admin, Sign out), screenshotting the moment focus landed on
+  each — all now show the same clearly visible Work Blue ring used
+  throughout the rest of the app. Also re-confirmed, per the task's
+  explicit ask, that the mobile Sheet's auto-close-on-navigation (a real
+  bug fixed during the original responsiveness pass) has not regressed:
+  navigated via keyboard (Tab to a nav link, Enter) and confirmed the
+  `dialog` node is gone from the accessibility tree afterward, with focus
+  correctly returned to the "Open menu" trigger.
 - **Impeccable `audit` + `polish` pass on `/talent-acquisition/candidates/[id]`.**
   `audit` scored the page 19/20 (Excellent). Findings shown to the user
   before any change, per convention: **[P2, accessibility]** all 5 `Select`

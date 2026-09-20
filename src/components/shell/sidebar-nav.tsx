@@ -35,7 +35,7 @@ export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
         key={item.href}
         href={item.href}
         className={cn(
-          "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "rounded-md px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
           isActive
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"

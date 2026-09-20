@@ -13,7 +13,7 @@ export function Wordmark() {
   return (
     <Link
       href="/talent-acquisition/board"
-      className="mb-6 flex w-fit items-center gap-2 transition-opacity hover:opacity-80"
+      className="mb-6 flex w-fit items-center gap-2 rounded-md outline-none transition-opacity hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-work-blue text-[10px] font-bold text-white">
         us.
