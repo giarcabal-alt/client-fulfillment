@@ -2,6 +2,36 @@
 
 ## [Unreleased]
 ### Added
+- **Seeded 24 additional skills (and their 63 aliases) into `skills`/
+  `skill_aliases`, covering the AI-stack/backend side of the talent pool**
+  that Step 1's general-purpose starter list (TypeScript, Python, PM,
+  Customer Support, etc.) didn't include — API integration, RAG/agentic
+  tooling, MLOps/LLMOps, and general backend skills. New migration
+  `supabase/migrations/20260921130000_seed_ai_stack_skills.sql`, same
+  `ON CONFLICT DO NOTHING` idempotent pattern as Step 1's seed
+  (`20260921120000`), and applies independently of it — it only inserts
+  into the two tables that migration already created, no schema change.
+  - Deliberately did **not** alias `aws`/`gcp`/`azure` under "Cloud
+    Infrastructure" — per the task's own explicit note, those are
+    distinct skills, not synonyms, and collapsing them would create
+    false matches once Step 3's fuzzy-matching exists. Left as a comment
+    directly next to the Cloud Infrastructure aliases in the migration,
+    not just here, so a future session touching this seed data sees the
+    reasoning in place.
+  - **Verified against a disposable local Postgres container**, applied
+    on top of a fresh copy of Step 1's schema + seed (not the project's
+    real database, and not the unrelated `3pl-sourcing` local Supabase
+    container already running on this machine) — confirmed 24 skills +
+    63 aliases inserted (bringing the running totals to 31 skills / 80
+    aliases with Step 1's 7/17), queried every new skill's alias list
+    back and confirmed it matches the spec exactly name-by-name, and
+    re-ran the migration a second time to confirm it inserts 0 rows the
+    second time (true idempotency, not just "the syntax has ON CONFLICT
+    in it"). Container removed after.
+  - **Not yet applied to the live project database** — no direct
+    Postgres connection available to Claude Code in this environment,
+    same standing limitation as the two other unapplied migrations
+    already flagged in `docs/PROJECT_STATE.md` §6.
 - **ATS_FEATURES.md Prompt 1: schema for resume parsing, skill/location
   normalization, interview scorecards, and the active/rejected status
   axis — schema and seed data only, per the plan's own step sequence
