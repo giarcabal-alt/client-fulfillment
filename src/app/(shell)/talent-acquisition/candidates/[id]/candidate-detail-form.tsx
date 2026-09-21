@@ -17,6 +17,7 @@ import {
 import {
   reassignCandidateRole,
   updateCandidateCommunicationRating,
+  updateCandidateLocation,
   updateCandidateNotes,
   updateCandidateSourcePlatform,
   updateCandidateStage,
@@ -27,6 +28,7 @@ import { SOURCE_PLATFORMS } from "@/lib/talent-acquisition/source-platforms";
 const NO_ROLE_VALUE = "none";
 const NO_SOURCE_VALUE = "none";
 const NO_RATING_VALUE = "unrated";
+const NO_LOCATION_VALUE = "none";
 
 type Candidate = {
   id: string;
@@ -36,14 +38,17 @@ type Candidate = {
   role_id: string | null;
   source_platform: string | null;
   communication_rating: number | null;
+  location_id: string | null;
 };
 
 export function CandidateDetailForm({
   candidate,
   roles,
+  locations,
 }: {
   candidate: Candidate;
   roles: { id: string; title: string }[];
+  locations: { id: string; city: string; province: string }[];
 }) {
   const [stage, setStage] = useState<CandidateStage>(candidate.stage);
   const [roleId, setRoleId] = useState<string>(
@@ -58,6 +63,9 @@ export function CandidateDetailForm({
     candidate.communication_rating != null
       ? String(candidate.communication_rating)
       : NO_RATING_VALUE
+  );
+  const [locationId, setLocationId] = useState(
+    candidate.location_id ?? NO_LOCATION_VALUE
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -145,6 +153,23 @@ export function CandidateDetailForm({
     });
   }
 
+  function handleLocationChange(next: string | null) {
+    if (!next || next === locationId) return;
+    const previous = locationId;
+    setLocationId(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateLocation(
+        candidate.id,
+        next === NO_LOCATION_VALUE ? null : next
+      );
+      if (result.error) {
+        setError(result.error);
+        setLocationId(previous);
+      }
+    });
+  }
+
   function sourceLabelFor(value: string) {
     return value === NO_SOURCE_VALUE ? "Not set" : value;
   }
@@ -156,6 +181,12 @@ export function CandidateDetailForm({
   function roleLabelFor(value: string) {
     if (value === NO_ROLE_VALUE) return "No role — Talent Pool";
     return roles.find((role) => role.id === value)?.title ?? value;
+  }
+
+  function locationLabelFor(value: string) {
+    if (value === NO_LOCATION_VALUE) return "Not set";
+    const location = locations.find((l) => l.id === value);
+    return location ? `${location.city}, ${location.province}` : value;
   }
 
   return (
@@ -254,6 +285,31 @@ export function CandidateDetailForm({
               {[1, 2, 3, 4, 5].map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}/5
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Location
+          </span>
+          <Select
+            value={locationId}
+            onValueChange={handleLocationChange}
+            disabled={isPending}
+          >
+            <SelectTrigger aria-label="Location">
+              <SelectValue>{(value: string) => locationLabelFor(value)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_LOCATION_VALUE}>Not set</SelectItem>
+              {locations.map((location) => (
+                <SelectItem key={location.id} value={location.id}>
+                  {location.city}, {location.province}
                 </SelectItem>
               ))}
             </SelectContent>

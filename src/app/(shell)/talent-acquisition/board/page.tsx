@@ -4,15 +4,19 @@ import { BoardClient, type BoardCandidate } from "./board-client";
 
 export default async function BoardPage() {
   const supabase = await createClient();
-  const [{ data, error }, { data: rolesData, error: rolesError }] =
-    await Promise.all([
-      supabase
-        .from("candidates")
-        .select(
-          "id, name, stage, stage_entered_at, last_action_at, touch_index, tags, role:roles(title)"
-        ),
-      supabase.from("roles").select("id, title").order("title"),
-    ]);
+  const [
+    { data, error },
+    { data: rolesData, error: rolesError },
+    { data: locationsData },
+  ] = await Promise.all([
+    supabase
+      .from("candidates")
+      .select(
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, tags, role:roles(title)"
+      ),
+    supabase.from("roles").select("id, title").order("title"),
+    supabase.from("locations").select("id, city, province").order("city"),
+  ]);
 
   if (error) {
     console.error("Failed to load candidates:", error);
@@ -22,6 +26,11 @@ export default async function BoardPage() {
   }
 
   const roles = (rolesData ?? []) as { id: string; title: string }[];
+  const locations = (locationsData ?? []) as {
+    id: string;
+    city: string;
+    province: string;
+  }[];
 
   const candidates: BoardCandidate[] = (data ?? []).map((row) => {
     const role = row.role as { title: string } | { title: string }[] | null;
@@ -61,7 +70,7 @@ export default async function BoardPage() {
         </p>
       )}
 
-      <BoardClient candidates={candidates} roles={roles} />
+      <BoardClient candidates={candidates} roles={roles} locations={locations} />
     </div>
   );
 }

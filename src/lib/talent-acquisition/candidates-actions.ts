@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requireAdminUser } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
 import {
+  finalizeSkillChips,
+  mergeTagsWithSkillNames,
+  persistCandidateSkills,
+  type SubmittedSkillChip,
+} from "@/lib/talent-acquisition/resume-parse-core";
+import {
   SOURCE_PLATFORMS,
   type SourcePlatform,
 } from "@/lib/talent-acquisition/source-platforms";
@@ -63,6 +69,52 @@ async function assertRoleIsVisible(
   }
 }
 
+// Same shape as assertRoleIsVisible above, for candidates.location_id
+// (ATS_FEATURES.md Step 1's `locations` table) — a scoped SELECT re-verifies
+// the id is actually visible to this org before it's accepted as a
+// foreign key, rather than trusting the FK constraint alone.
+async function assertLocationIsVisible(
+  supabase: Awaited<ReturnType<typeof requireUser>>,
+  locationId: string
+) {
+  const { data, error } = await supabase
+    .from("locations")
+    .select("id")
+    .eq("id", locationId)
+    .maybeSingle();
+  if (error || !data) {
+    throw new Error("LOCATION_NOT_FOUND");
+  }
+}
+
+// Parses the New Candidate form's optional `skills_json` field — a JSON
+// array of SubmittedSkillChip built client-side from a staged resume
+// parse (see new-candidate-resume-actions.ts / resume-parse.tsx). Never
+// trusts it blindly: malformed JSON or a malformed entry is silently
+// dropped (fails toward "no skills submitted", not toward crashing candidate
+// creation over a client-side data problem) — the real security-relevant
+// checks (does this skillId actually belong to this org) still happen
+// later in persistCandidateSkills, not here.
+function parseSubmittedSkillChips(raw: FormDataEntryValue | null): SubmittedSkillChip[] {
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is SubmittedSkillChip => {
+      return (
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as SubmittedSkillChip).rawText === "string" &&
+        typeof (item as SubmittedSkillChip).currentText === "string" &&
+        ((item as SubmittedSkillChip).kind === "auto" ||
+          (item as SubmittedSkillChip).kind === "review")
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function createCandidate(
   _prevState: CandidateActionState,
   formData: FormData
@@ -74,6 +126,13 @@ export async function createCandidate(
   const roleId = formData.get("role_id");
   const newRoleTitle = formData.get("new_role_title");
   const sourcePlatform = formData.get("source_platform");
+  // All three optional, only present when a resume was uploaded+parsed in
+  // the New Candidate form (see new-candidate-form.tsx) — manual entry
+  // without a resume never sets any of these, so the rest of this
+  // function behaves exactly as it did before this task.
+  const stagedResumePath = formData.get("staged_resume_path");
+  const locationId = formData.get("location_id");
+  const skillChips = parseSubmittedSkillChips(formData.get("skills_json"));
 
   if (typeof name !== "string" || !name.trim()) {
     return { error: "Name is required." };
@@ -129,21 +188,83 @@ export async function createCandidate(
       finalRoleId = newRole.id as string;
     }
 
-    const { error } = await supabase.from("candidates").insert({
-      name: name.trim(),
-      role_id: finalRoleId,
-      stage,
-      notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-      tags: typeof tags === "string" && tags.trim() ? tags.trim() : null,
-      source_platform:
-        typeof sourcePlatform === "string" && sourcePlatform
-          ? sourcePlatform
-          : null,
-    });
-    if (error) throw error;
+    // Resume/skills/location only ever come from the New Candidate form's
+    // optional resume-upload-with-autofill path (this task's addition) —
+    // every field here defaults to exactly what plain manual entry already
+    // inserted before this task, unchanged.
+    let finalLocationId: string | null = null;
+    if (typeof locationId === "string" && locationId) {
+      await assertLocationIsVisible(supabase, locationId);
+      finalLocationId = locationId;
+    }
+
+    // Authorization beyond RLS (SECURITY.md): staged_resume_path is a
+    // client-supplied storage path, not something this action generated
+    // itself — verify its leading org_id segment actually matches the
+    // caller's own org before accepting it, rather than trusting it
+    // blindly. A path that fails this check is silently dropped (no
+    // resume attached) rather than failing the whole candidate creation,
+    // the same "fail toward the safe, degraded case" choice
+    // uploadStagingResume itself makes when parsing fails but the upload
+    // succeeded.
+    let finalResumePath: string | null = null;
+    if (typeof stagedResumePath === "string" && stagedResumePath) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user?.id ?? "")
+        .maybeSingle();
+      if (profile && stagedResumePath.startsWith(`${profile.org_id}/staging/`)) {
+        finalResumePath = stagedResumePath;
+      } else {
+        console.error(
+          "Ignored staged_resume_path — org prefix didn't match the caller's own org"
+        );
+      }
+    }
+
+    const { persist: skillsToPersist, confirmedNames } = finalizeSkillChips(skillChips);
+    const finalTags = mergeTagsWithSkillNames(
+      typeof tags === "string" && tags.trim() ? tags.trim() : null,
+      confirmedNames
+    );
+
+    const { data: newCandidate, error } = await supabase
+      .from("candidates")
+      .insert({
+        name: name.trim(),
+        role_id: finalRoleId,
+        stage,
+        notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+        tags: finalTags,
+        source_platform:
+          typeof sourcePlatform === "string" && sourcePlatform
+            ? sourcePlatform
+            : null,
+        resume_path: finalResumePath,
+        location_id: finalLocationId,
+      })
+      .select("id, org_id")
+      .single();
+    if (error || !newCandidate) throw error ?? new Error("Candidate creation returned no row");
+
+    if (skillsToPersist.length > 0) {
+      await persistCandidateSkills(
+        supabase,
+        newCandidate.org_id as string,
+        newCandidate.id as string,
+        skillsToPersist
+      );
+    }
   } catch (error) {
     if (error instanceof Error && error.message === "ROLE_NOT_FOUND") {
       return { error: "That role couldn't be found." };
+    }
+    if (error instanceof Error && error.message === "LOCATION_NOT_FOUND") {
+      return { error: "That location couldn't be found." };
     }
     // Fail securely — never surface raw Postgres/schema errors (SECURITY.md).
     console.error("Failed to create candidate:", error);
@@ -380,6 +501,38 @@ export async function updateCandidateAssignment(
     }
     console.error("Failed to update candidate assignment:", error);
     return { error: "Couldn't update the assignment. Please try again." };
+  }
+
+  revalidatePath(BOARD_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+// Added alongside resume-upload-with-autofill (ATS_FEATURES.md Step 3
+// follow-up): location_id was previously only ever set by parseResume's
+// auto-match path, with nothing on the candidate detail page to view or
+// correct it — data only visible via direct SQL otherwise. Same
+// authorization-beyond-RLS shape as reassignCandidateRole for role_id.
+export async function updateCandidateLocation(
+  id: string,
+  locationId: string | null
+): Promise<CandidateActionState> {
+  try {
+    const supabase = await requireUser();
+    if (locationId) {
+      await assertLocationIsVisible(supabase, locationId);
+    }
+    const { error } = await supabase
+      .from("candidates")
+      .update({ location_id: locationId })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    if (error instanceof Error && error.message === "LOCATION_NOT_FOUND") {
+      return { error: "That location couldn't be found." };
+    }
+    console.error("Failed to update candidate location:", error);
+    return { error: "Couldn't update the location. Please try again." };
   }
 
   revalidatePath(BOARD_PATH);

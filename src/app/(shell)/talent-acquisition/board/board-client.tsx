@@ -72,9 +72,11 @@ export type BoardCandidate = {
 export function BoardClient({
   candidates,
   roles,
+  locations,
 }: {
   candidates: BoardCandidate[];
   roles: { id: string; title: string }[];
+  locations: { id: string; city: string; province: string }[];
 }) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -136,7 +138,11 @@ export function BoardClient({
               New Candidate
             </DialogTitle>
           </DialogHeader>
-          <NewCandidateForm roles={roles} onSuccess={() => setAddOpen(false)} />
+          <NewCandidateForm
+            roles={roles}
+            locations={locations}
+            onSuccess={() => setAddOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
