@@ -35,6 +35,7 @@ export function InviteUserForm() {
           type="email"
           placeholder="teammate@company.com"
           required
+          aria-describedby={state.error ? "invite-email-error" : undefined}
           className="max-w-sm"
         />
       </div>
@@ -42,7 +43,13 @@ export function InviteUserForm() {
         {isPending ? "Sending…" : "Send invite"}
       </Button>
       {state.error && (
-        <p className="w-full text-sm text-destructive">{state.error}</p>
+        <p
+          id="invite-email-error"
+          role="alert"
+          className="w-full text-sm text-destructive"
+        >
+          {state.error}
+        </p>
       )}
     </form>
   );

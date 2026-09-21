@@ -1,7 +1,220 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- **Root cause found and fixed for the invite-email gap logged in the
+  previous entry: Supabase's default confirmation link puts the session
+  in a URL hash fragment (`#access_token=...`), which a server-side route
+  handler never sees — the fragment never leaves the browser, so it can't
+  reach `/auth/confirm` no matter how that route is written.** The user
+  fixed this from their side by updating the **Invite user** and **Reset
+  Password** email templates in the Supabase dashboard (Authentication →
+  Email Templates) to use the `token_hash`/`type`/`redirect_to`
+  query-param format instead, pointing at `/auth/confirm`. **This is a
+  manual dashboard step with no code equivalent — nothing in this repo
+  can set or verify it, and it's worth checking for on any future project
+  that uses Supabase email-based auth links** (invite, magic link,
+  recovery) — the symptom (a link that "does nothing" / silently lands
+  back at a login-like page with no session) looks like a bug in the
+  receiving route when it's actually the sending template. Logged as a
+  fragile-area note in `docs/PROJECT_STATE.md` §10, not just here, so
+  it's visible without having to find this changelog entry first.
+  - Verified `/auth/confirm/route.ts` already matched the exact pattern
+    this fix requires: reads `token_hash`/`type` from `searchParams`,
+    calls `supabase.auth.verifyOtp({ type, token_hash })` via the server
+    client, redirects to `next` on success. The one real gap: on failure
+    it redirected silently to `/login`, indistinguishable from "nothing
+    happened" — a genuinely expired/already-used/tampered link gave no
+    signal anything went wrong. Added a real `/auth/error` page (styled
+    to match `/login`/`/set-password`) and pointed the failure path there
+    instead. Verified live via cookie-less `curl`: a bogus `token_hash`
+    and a request with no params at all both now 307 to `/auth/error`
+    (previously both went to `/login`); the no-session guard on
+    `/set-password` itself is unchanged and still correctly goes to
+    `/login` — a different concern (missing session vs. a bad token).
+  - **Added password reset**: a "Reset password" button per user row on
+    `/admin`, admin-only (`requireAdminUser()`), behind a confirmation
+    dialog. Calls the new `resetUserPassword` Server Action
+    (`admin-actions.ts`), which uses `supabase.auth.resetPasswordForEmail()`
+    — a regular (non-admin) auth method, so it runs on the normal
+    cookie-scoped client, not `admin-client.ts` (no service-role
+    privileges needed for it). `redirectTo` points at the same
+    `/auth/confirm?next=/set-password` as `inviteUser` — one route
+    handler now serves both an invite token and a recovery token, since
+    both are just different `EmailOtpType` values through the same
+    `verifyOtp()` call. On success, shows a "Reset email sent"
+    confirmation using the same `growth-green` + `sr-only` live-region
+    pattern as the settings-page save-confirmation fix.
+  - **Added delete user**: a "Delete" button per user row, admin-only,
+    behind a destructive-styled confirmation dialog, same guard shape as
+    role changes — blocks self-delete and blocks deleting the last
+    remaining admin (the last-admin check is now a shared
+    `isLastRemainingAdmin()` helper, used by both `updateUserRole` and
+    the new `deleteUser`, rather than duplicated). **Per the explicit
+    instruction not to silently touch other data**: before deleting,
+    checks whether the user has any `candidates.assigned_to` pointing at
+    them and, if so, blocks with a clear count and a "reassign them
+    first" message — that's a live, current responsibility, not
+    something to silently clear as a side effect of removing an account.
+  - **Schema gap found while building this, not assumed away**: every FK
+    from `public` tables to `profiles(id)` (and `profiles.id` itself, to
+    `auth.users(id)`) had no `ON DELETE` behavior specified, defaulting to
+    `NO ACTION` (blocking). This meant `admin.auth.admin.deleteUser()`
+    would fail outright with a foreign-key violation the moment a
+    matching `profiles` row still existed — true for *any* caller,
+    including Supabase's own dashboard "Delete user" button, not just
+    this app's code. New migration
+    `20260921090000_fix_fk_behavior_for_user_deletion.sql` makes
+    `profiles.id → auth.users(id)` cascade (required for deletion to work
+    at all) and makes `roles.created_by` / `candidates.created_by` /
+    `candidate_history.created_by` / `candidate_drafts.generated_by` →
+    `profiles(id)` set null instead (historical attribution — safe to
+    lose the specific "who made this," the record itself must survive).
+    Deliberately left `candidates.assigned_to` alone — that's the one
+    reference that should keep blocking, backed up by `deleteUser`'s own
+    explicit application-level check above, not by a silent database-level
+    null-out. **`deleteUser` doesn't assume this migration has been
+    applied**: it explicitly deletes the `profiles` row itself before
+    calling `deleteUser()` (defense in depth, redundant but harmless once
+    the migration lands), and if a `23503` foreign-key-violation still
+    surfaces (someone who created roles/candidates before the migration
+    ran), it's caught and reported as a specific, honest message rather
+    than the generic catch-all. **This migration has not been applied to
+    the live database by me — I have no direct Postgres connection to
+    this project, only the anon/service-role REST keys, which can't run
+    DDL.** It needs to be run the same way prior migrations in this repo
+    were (Supabase SQL Editor, or `supabase db push` once linked) before
+    deleting a user who has ever created any roles/candidates will fully
+    succeed without hitting that `23503` path.
+  - No new grants needed for any of this: `profiles` DELETE is already
+    covered by the blanket `grant ... on all tables in schema public` from
+    `20260914060451_fix_grants_and_roles_delete_policy.sql`, and
+    `admin-client.ts`'s service-role key bypasses RLS entirely regardless
+    of policy — confirmed by reading that migration rather than assuming.
+  - Verified live via Playwright MCP at 1280px and 375px: both buttons'
+    appearance and both confirmation dialogs (Reset password's blue
+    "Send email" / outline "Cancel", Delete's destructive-red "Delete" /
+    outline "Cancel") render correctly and match `DESIGN_SYSTEM.md`,
+    including the dialog's `flex-col-reverse` footer stacking correctly
+    at mobile width. Opened the delete-confirmation dialog for my own
+    admin account to test the self-delete guard live — the harness's own
+    auto-mode safety classifier blocked clicking the actual "Delete"
+    confirm button as an irreversible-deletion action, so that specific
+    click wasn't performed; the guard was instead verified by code (an
+    identical `userId === actingUser.id` check to `updateUserRole`'s
+    self-demotion guard, which *was* live-clicked and confirmed working
+    in the previous `/admin` audit session) plus `tsc`. Did not click
+    "Send email" on the reset-password dialog or "Delete" against any of
+    the real accounts in this environment (`Main`, `dani@...`,
+    `giar.cabal@...`) — sending a real reset email or deleting a real
+    account are exactly the kind of side effects this task asked to leave
+    for manual testing, not simulate through the UI myself.
+  - **The actual invite/reset email round trip (a real email arriving,
+    its link landing on `/set-password` already authenticated, setting a
+    password, signing in afterward) still needs real manual end-to-end
+    testing — this was not and could not be verified by me.** What *was*
+    verified: the route/page code matches the required pattern, the
+    error path now visibly fails instead of silently doing nothing, and
+    both new admin buttons/dialogs render and behave correctly in
+    isolation.
+- **Closed a real gap in the invite flow: the invite email had nowhere to
+  land.** `inviteUser` (`admin-actions.ts`) has called Supabase's
+  `inviteUserByEmail()` since the admin/invite feature was first built,
+  which sends a real email with an auth link — but no route existed to
+  receive that link, and no page existed to let the invited user actually
+  set their initial password. An invited teammate clicking the email link
+  would have hit a dead end (Supabase's own default confirmation flow,
+  never wired to anything in this app) with no way to ever sign in, since
+  `inviteUserByEmail` never sets a password itself by design (the whole
+  point of using it over a plain signup was that the admin never sets or
+  sees another user's password).
+  - **New route handler** `src/app/auth/confirm/route.ts` — receives the
+    invite (and, incidentally, any future recovery/magic-link) email
+    link, reads `token_hash`/`type`/`next` from the query string, and
+    calls `supabase.auth.verifyOtp({ type, token_hash })`. This both
+    validates the token and establishes a real session via the existing
+    cookie-writing `createClient()` (`src/lib/supabase/server.ts`) — no
+    new Supabase client pattern introduced. On success, redirects to
+    `next` (`/set-password`); on failure or missing params, redirects to
+    `/login`. This is Supabase's documented server-side-verification
+    pattern for Next.js App Router, not a custom invention.
+  - **New page** `src/app/set-password/` (`page.tsx` + client
+    `set-password-form.tsx` + `actions.ts`) — styled directly from
+    `DESIGN_SYSTEM.md`, matching `/login`'s existing centered-Card layout
+    exactly (same `Card`/`CardHeader`/`CardTitle`/`CardDescription`
+    structure, same form field spacing). The page itself calls
+    `getUser()` server-side and redirects to `/login` if there's no
+    session — reachable only after `/auth/confirm` has already verified a
+    real token, never by navigating there directly. Confirmed this live
+    with a cookie-less request (`curl`, no browser session): both
+    `/auth/confirm` (no token) and `/set-password` (no session) correctly
+    307-redirect to `/login`. The form (new password + confirm, both
+    `type="password"`, `minLength={8}`) posts to a Server Action that
+    re-derives the user via `getUser()` (SECURITY.md — never trusts the
+    page having already checked), validates the two fields match and meet
+    the length minimum, calls `supabase.auth.updateUser({ password })`,
+    and redirects to `/talent-acquisition/board` on success. Error text
+    uses `role="alert"` and `aria-describedby`, consistent with the
+    accessibility fixes made across this whole audit series.
+  - **`inviteUser` now passes `redirectTo`** pointing at
+    `/auth/confirm?next=/set-password` instead of leaving Supabase to use
+    its own default. Building an absolute URL required a new env var —
+    Server Actions have no request URL to derive an origin from — so
+    added `NEXT_PUBLIC_SITE_URL` (documented in `.env.example`, set
+    locally in `.env.local` to `http://localhost:3000`; **must be set to
+    the real deployed origin in production**, e.g. in Vercel's project
+    env vars, or the invite link will point at localhost).
+  - **Known prerequisite this build cannot satisfy itself**: for the
+    email link to actually land on `/auth/confirm` with `token_hash`/
+    `type` query params (rather than Supabase's own default verify
+    endpoint), the **Invite user** email template in the Supabase
+    dashboard (Authentication → Email Templates) must link to
+    `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/set-password`
+    — this is a dashboard configuration step, not code, and nothing in
+    this repo can verify or set it. **Flagging clearly: this whole flow
+    needs a real end-to-end manual test** — send a real invite from
+    `/admin`, click the actual emailed link, confirm it lands on
+    `/set-password` already signed in, set a password, confirm it lands
+    on the board, and confirm the new account can then sign in normally
+    from `/login`. I verified the page/route code in isolation (the
+    unauthenticated-redirect guards via `curl`, the authenticated layout
+    and keyboard focus visually via Playwright at both widths) but did
+    **not** submit the form through a real invite token — no way to
+    generate one without sending a real email, and I was not going to
+    guess around that boundary.
 ### Fixed
+- **Impeccable `audit` + `polish` pass on `/admin` — visual/accessibility only, no Server Action or guard logic touched.**
+  `audit` scored 18/20 (Excellent, borderline — Accessibility was the
+  drag). Findings shown to the user before any change, per convention:
+  **[P1, accessibility]** the two guard-rail/failure error messages
+  (`user-row.tsx`'s role-change error — the same path the self-demotion
+  and last-admin guards return through — and `invite-user-form.tsx`'s
+  invite error) rendered as plain `<p>`s with no `role`/`aria-live`, so a
+  screen-reader user attempting a blocked action got no signal anything
+  happened at all. Verified this by actually triggering the self-demotion
+  guard live, not just reading the code: signed in as the sole admin,
+  changed my own Role dropdown to "Member", confirmed the guard correctly
+  blocked it server-side ("You can't demote yourself.", role reverted, no
+  data changed) and checked the DOM — `role: null, aria-live: null`.
+  **[P2, accessibility]** neither error was linked via `aria-describedby`
+  to the control it related to. Per the task's explicit scope, this pass
+  touched only markup/ARIA on `user-row.tsx` and `invite-user-form.tsx`;
+  `src/lib/admin-actions.ts` and `src/lib/supabase/admin-client.ts` were
+  read for context but have a zero-line diff (confirmed via `git diff
+  --stat`) — the self-demotion guard, last-admin guard, and invite
+  validation are unchanged. Fix: added `role="alert"` to both error
+  `<p>`s so they're announced immediately without requiring focus to
+  move; wired each to its Role `Select`/Email `Input` via
+  `aria-describedby` with a stable id. Verified live at 1280px and 375px:
+  confirmed the role dropdown, display-name input, and invite email input
+  already had clear accessible names before any change (`combobox
+  "Role"`, `textbox "Display name"`, `textbox "Email"` — a positive
+  finding, not a gap); re-triggered the self-demotion guard post-fix and
+  confirmed `role="alert"` and the correct `aria-describedby` link both
+  fire, with the role still correctly reverting to Admin (guard behavior
+  unchanged). Full keyboard Tab-through of the invite form and every user
+  row's display-name/role controls at both widths shows the established
+  Work Blue ring throughout.
 - **Impeccable `audit` + `polish` pass on `/settings`.** `audit` scored
   18/20 (Excellent, borderline — Accessibility was the drag). Findings
   shown to the user before any change, per convention: **[P1,
