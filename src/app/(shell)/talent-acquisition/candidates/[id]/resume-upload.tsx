@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { uploadResume } from "@/lib/talent-acquisition/resume-actions";
 
 const ACCEPTED_TYPES =
@@ -22,6 +22,7 @@ export function ResumeUpload({
   resumeUrl: string | null;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,12 +30,19 @@ export function ResumeUpload({
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
+    setFileName(file.name);
     const formData = new FormData();
     formData.set("file", file);
     startTransition(async () => {
       const result = await uploadResume(candidateId, formData);
       if (result.error) {
         setError(result.error);
+      } else {
+        // Success: the "View resume" link (driven by the resumeUrl prop,
+        // refreshed via revalidatePath) is the confirmation now — no need
+        // for the transient filename to keep showing alongside it. On
+        // failure it stays, so the error is legible next to what failed.
+        setFileName(null);
       }
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -55,20 +63,45 @@ export function ResumeUpload({
         </a>
       )}
 
-      <label className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
           {resumeUrl ? "Replace resume (PDF or DOCX)" : "Resume (PDF or DOCX)"}
         </span>
-        <Input
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isPending}
+            aria-label={resumeUrl ? "Choose replacement resume file" : "Choose resume file"}
+            className="w-fit"
+          >
+            Choose file
+          </Button>
+          {fileName && (
+            <span className="min-w-0 truncate text-sm text-slate-text">
+              {fileName}
+            </span>
+          )}
+        </div>
+        {/* `hidden` (display:none), not `sr-only` — this input is never
+            meant to be its own tab stop. The Button above is the single
+            real, keyboard-operable trigger (native <button>, so Enter/
+            Space activate it for free); an sr-only input would still sit
+            in the tab order as an invisible, confusing second stop right
+            next to it. Triggered entirely via fileInputRef.current.click(). */}
+        <input
           ref={fileInputRef}
           type="file"
           accept={ACCEPTED_TYPES}
           onChange={handleFileChange}
           disabled={isPending}
-          aria-label={resumeUrl ? "Replace resume" : "Resume file"}
-          className="max-w-xs"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="hidden"
         />
-      </label>
+      </div>
 
       {isPending && (
         <p className="text-sm text-muted-foreground">Uploading…</p>
