@@ -18,6 +18,7 @@ import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
 import { DraftGenerator } from "./draft-generator";
+import { ResumeUpload } from "./resume-upload";
 
 type RoleEmbed = {
   id: string;
@@ -54,7 +55,7 @@ export default async function CandidateDetailPage({
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, resume_path, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -160,6 +161,25 @@ export default async function CandidateDetailPage({
       ? (draftRow.content as string)
       : null;
 
+  // The `resumes` bucket is private — there's no public URL to just
+  // build a string for. A signed URL has to be requested through the
+  // RLS-scoped client (same "resumes: select within org" policy that
+  // gates everything else in that bucket), generated fresh on every page
+  // load rather than cached/stored, so it always reflects current
+  // access and never outlives its own short expiry sitting unused in a
+  // database row.
+  const resumePath = candidateRow.resume_path as string | null;
+  let resumeUrl: string | null = null;
+  if (resumePath) {
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from("resumes")
+      .createSignedUrl(resumePath, 3600);
+    if (signedError) {
+      console.error("Failed to create signed resume URL:", signedError);
+    }
+    resumeUrl = signedData?.signedUrl ?? null;
+  }
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
       <div>
@@ -192,6 +212,15 @@ export default async function CandidateDetailPage({
             isAdmin={isAdmin}
             assignableProfiles={assignableProfiles}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Resume</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResumeUpload candidateId={candidate.id} resumeUrl={resumeUrl} />
         </CardContent>
       </Card>
 
