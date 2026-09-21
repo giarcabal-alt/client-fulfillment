@@ -170,6 +170,10 @@ export function CandidateDetailForm({
     });
   }
 
+  function stageLabelFor(value: string) {
+    return BOARD_STAGES.find((s) => s.key === value)?.label ?? value;
+  }
+
   function sourceLabelFor(value: string) {
     return value === NO_SOURCE_VALUE ? "Not set" : value;
   }
@@ -202,7 +206,7 @@ export function CandidateDetailForm({
             disabled={isPending}
           >
             <SelectTrigger aria-label="Stage">
-              <SelectValue />
+              <SelectValue>{(value: string) => stageLabelFor(value)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {BOARD_STAGES.map((s) => (

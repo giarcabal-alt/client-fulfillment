@@ -45,6 +45,10 @@ export function CandidateDrawer({
     });
   }
 
+  function stageLabelFor(value: string) {
+    return BOARD_STAGES.find((s) => s.key === value)?.label ?? value;
+  }
+
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent>
@@ -68,7 +72,7 @@ export function CandidateDrawer({
               disabled={isPending}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>{(value: string) => stageLabelFor(value)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {BOARD_STAGES.map((s) => (
