@@ -2,6 +2,103 @@
 
 ## [Unreleased]
 ### Added
+- **Prompt 8: the "generate suggested message" feature, per BUILD_BRIEF.md
+  §5 exactly** — single-shot generation on `/talent-acquisition/candidates/[id]`,
+  not a chat thread. New `generateSuggestedMessage(candidateId, extraContext?)`
+  Server Action in `src/lib/talent-acquisition/draft-actions.ts`, and a new
+  "Suggested message" card on the candidate detail page rendered by a new
+  client component, `draft-generator.tsx`.
+  - **Auth + authorization, in that order, before any Anthropic call**:
+    `getUser()` first (rejects if unauthenticated), then an explicit
+    compare of the candidate's `org_id` against the caller's own
+    `profiles.org_id` — this is a third-party API call, a real side
+    effect, so per SECURITY.md's authorization-beyond-RLS rule it needs
+    its own check, not just an implicit reliance on the scoped `SELECT`
+    already returning nothing for a candidate RLS would hide. Both reads
+    happen, then the two org_ids are compared directly.
+  - **Prompt built server-side** from the candidate's name/stage/notes,
+    the assigned role's title + `job_description` (via the existing
+    `role_id` join), `org_settings.company_name`, the caller's own
+    `profiles.display_name`, the cadence-computed next action
+    (`nextActionFor`), and its reference script (`scriptFor`) as a
+    style guide — `buildSystemPrompt()` in `draft-actions.ts`, ported
+    from the prototype's `buildSystemPrompt()` in `recruiting-desk.html`
+    almost verbatim, fed from real DB data instead of local-storage
+    state, per BUILD_BRIEF.md §8.
+  - **Confirmed the Anthropic call happens only in this Server Action —
+    never in a client component.** `draft-generator.tsx` (the "use
+    client" piece) only ever calls `generateSuggestedMessage()`, a
+    `"use server"` export; it never imports `config.anthropic` or issues
+    a `fetch` to `api.anthropic.com` itself. This is exactly the mistake
+    an earlier prototype iteration made (a direct browser-side call,
+    exposing the API key) — see the fragile-area note in
+    `docs/PROJECT_STATE.md` §10, re-confirmed here by inspection, not
+    just carried forward as an assumption.
+  - **Persisted to `candidate_drafts`** — one row per generation
+    (`candidate_id`, `stage`, `content`, `generated_by`), after a
+    successful API response, before the content is ever returned to the
+    client. Treated as load-bearing: if the insert itself fails, the
+    action returns the same generic failure rather than handing back a
+    draft with no audit-trail row for it.
+  - **Draft goes stale on stage change** (BUILD_BRIEF.md §5): the
+    candidate detail page fetches the single most recent draft row for
+    the candidate and only shows it if its stored `stage` still matches
+    the candidate's *current* stage; a stage change since the last
+    generation makes the card fall back to "Generate suggested message"
+    instead of showing a leftover draft that no longer applies.
+  - **Fail securely**: any Anthropic API error, a missing
+    `ANTHROPIC_API_KEY`, or an insert failure all collapse to the same
+    generic `"Couldn't generate a draft, try again."` — never the raw
+    Anthropic error text. Verified live (see below) against a real API
+    failure, not just by reading the code.
+  - **Basic per-org daily cap** (200/day, `DAILY_GENERATION_CAP` in
+    `draft-actions.ts`) — a backstop against a runaway loop per
+    BUILD_BRIEF.md §5, checked before the API call is made. `candidate_drafts`
+    has no `org_id` column of its own, so the count goes through an
+    `candidate_drafts?select=id,candidates!inner(org_id)` inner join to
+    `candidates`, the same org-scoping shape the RLS policies on this
+    table already use. Sanity-checked the exact query shape directly
+    against the live REST API (service-role key) — 200 OK, valid filter
+    syntax, confirmed separately from the blocked live-generation test
+    below.
+  - **Flagged for rate-limiting review**, per SECURITY.md — a top-of-file
+    comment in `draft-actions.ts`, matching the convention already used
+    for `inviteUser`/`resetUserPassword` in `admin-actions.ts`.
+  - **Checked grants**: none needed. `candidate_drafts` and `org_settings`
+    are both existing tables already covered by the blanket
+    `ALTER DEFAULT PRIVILEGES` grant in
+    `20260914060451_fix_grants_and_roles_delete_policy.sql` — confirmed
+    by reading that migration directly, not assumed. No new migration.
+  - **Real blocker hit while live-testing, not a code bug**: the
+    `ANTHROPIC_API_KEY` currently in `.env.local` is an *unscoped*
+    (org-level) key. Anthropic's API now rejects unscoped keys with a 400
+    unless every request also carries an `anthropic-workspace-id` header
+    — confirmed by a direct `curl` against the real API, independent of
+    this app's code, not inferred from the client's generic error alone.
+    Added optional support for this: `ANTHROPIC_WORKSPACE_ID` in
+    `config.ts`/`.env.example`, sent as that header only when set. **Left
+    unresolved on purpose** — the user chose to leave it blocked for now
+    rather than have Claude Code guess a workspace ID, and will fix the
+    credential (either add the workspace ID or swap in a workspace-scoped
+    key) via the Anthropic Console on their own.
+  - **Verified live via Playwright MCP** (session was already
+    authenticated — no login prompt needed, per that convention's own
+    carve-out) on a real candidate (Gil Demiar, `test role 2`, stage
+    Interviewing) at desktop width: the new "Suggested message" card
+    renders correctly, matching every other card's `Card`/typography
+    convention on this page; clicking "Generate suggested message"
+    correctly triggers the real Server Action, hits the real (failing,
+    per the blocker above) Anthropic API, and surfaces the generic
+    fail-securely error (`role="alert"`, no raw error text) — confirming
+    the whole pipeline up to and past the API call is wired correctly,
+    even though the call itself can't succeed yet. Confirmed via keyboard
+    Tab that both the extra-context `Textarea` and the "Generate
+    suggested message" `Button` (a real accessible name, matching the
+    visible label) show the established Work Blue focus ring. **Could
+    not screenshot a successful generation or confirm the generated
+    message renders readably** — blocked entirely by the credential issue
+    above, not by anything in this feature's own code. Needs a real
+    successful generation, screenshotted, once the credential is fixed.
 - **Root cause found and fixed for the invite-email gap logged in the
   previous entry: Supabase's default confirmation link puts the session
   in a URL hash fragment (`#access_token=...`), which a server-side route

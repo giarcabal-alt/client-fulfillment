@@ -17,6 +17,7 @@ import { scriptFor } from "@/lib/talent-acquisition/scripts";
 import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
+import { DraftGenerator } from "./draft-generator";
 
 type RoleEmbed = {
   id: string;
@@ -48,6 +49,7 @@ export default async function CandidateDetailPage({
     { data: historyData },
     { data: profileRow },
     userRole,
+    { data: draftRow },
   ] = await Promise.all([
     supabase
       .from("candidates")
@@ -71,6 +73,21 @@ export default async function CandidateDetailPage({
           .maybeSingle()
       : Promise.resolve({ data: null as { display_name: string | null } | null }),
     getUserRole(),
+    // Most recent draft for this candidate, any stage — the stage stored
+    // alongside it (`stage`) is compared against the candidate's *current*
+    // stage below, after both are loaded, since this query runs in
+    // parallel with the candidate fetch and can't know the current stage
+    // yet. A draft goes stale on stage change (BUILD_BRIEF.md §5): if the
+    // candidate has since moved on, that comparison is what makes the old
+    // draft disappear from the page rather than lingering as if it still
+    // applied.
+    supabase
+      .from("candidate_drafts")
+      .select("content, stage")
+      .eq("candidate_id", id)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (error) {
@@ -134,6 +151,15 @@ export default async function CandidateDetailPage({
     recruiterName: (profileRow?.display_name as string | null) ?? null,
   });
 
+  // Stale-on-stage-change (BUILD_BRIEF.md §5): only show the latest draft
+  // if it was generated at the candidate's *current* stage — a draft left
+  // over from a stage the candidate has since moved past no longer
+  // applies, so the page falls back to "generate" instead of showing it.
+  const initialDraft =
+    draftRow && draftRow.stage === candidate.stage
+      ? (draftRow.content as string)
+      : null;
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
       <div>
@@ -184,6 +210,15 @@ export default async function CandidateDetailPage({
               No scripted template at this stage.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Suggested message</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DraftGenerator candidateId={candidate.id} initialDraft={initialDraft} />
         </CardContent>
       </Card>
 
