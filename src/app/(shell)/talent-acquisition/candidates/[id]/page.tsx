@@ -18,6 +18,7 @@ import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
 import { DraftGenerator } from "./draft-generator";
+import { ResumeParse } from "./resume-parse";
 import { ResumeUpload } from "./resume-upload";
 
 type RoleEmbed = {
@@ -219,8 +220,9 @@ export default async function CandidateDetailPage({
         <CardHeader>
           <CardTitle className="text-lg">Resume</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <ResumeUpload candidateId={candidate.id} resumeUrl={resumeUrl} />
+          <ResumeParse candidateId={candidate.id} hasResume={Boolean(resumePath)} />
         </CardContent>
       </Card>
 
