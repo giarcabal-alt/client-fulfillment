@@ -2,6 +2,93 @@
 
 ## [Unreleased]
 ### Added
+- **ATS_FEATURES.md Prompt 1: schema for resume parsing, skill/location
+  normalization, interview scorecards, and the active/rejected status
+  axis — schema and seed data only, per the plan's own step sequence
+  (no Storage bucket, parsing, or UI yet; those are Prompts 2-7).** New
+  migration `supabase/migrations/20260921120000_ats_features_step1_schema.sql`.
+  - `pg_trgm` extension enabled (ships with Postgres, no install) — powers
+    fuzzy skill/location matching starting in Prompt 3; no GIN trigram
+    indexes added yet, deliberately, since no query needs them until that
+    step exists.
+  - New tables: `skills`, `skill_aliases`, `locations`, `location_aliases`,
+    `candidate_skills`/`role_skills` (join tables, composite PK, no
+    `org_id` of their own), `candidate_skill_reviews` (the pending
+    fuzzy-match queue), `interview_scorecards`.
+  - Four new columns on `candidates`: `resume_path`, `location_id`,
+    `status` (`active`/`rejected`, defaults `active`), `decline_reason` —
+    `status` is intentionally orthogonal to the existing `stage` column,
+    per ATS_FEATURES.md's "candidate status vs. stage" architecture
+    decision (rejecting a candidate doesn't move them through the
+    pipeline; it sets `status` and requires a reason, separately).
+  - **RLS enabled on all eight new tables, mirroring the existing pattern
+    exactly rather than inventing a new shape**: `skills`/`skill_aliases`/
+    `locations`/`location_aliases`/`candidate_skill_reviews` all carry
+    their own `org_id`, so they get the same direct
+    `org_id = current_org_id()` select/insert/update policies
+    `roles`/`candidates` use. `candidate_skills`/`role_skills` have no
+    `org_id` column, so they get the derived-org-membership shape
+    `candidate_history`/`candidate_drafts` already use (an `exists`
+    subquery through the parent `candidates`/`roles` row) — select/
+    insert/delete only, since these are pure membership rows with no
+    non-key column an update would ever touch. `interview_scorecards`
+    deliberately gets **select + insert only, no update, no delete** —
+    ATS_FEATURES.md's own schema comment calls this table "append-only,"
+    enforced here at the RLS layer itself, not left as a comment alone,
+    so a future accidental edit/delete action fails closed instead of
+    silently rewriting interview history.
+  - Deliberately did **not** cross-check a row's other foreign keys
+    (e.g. `skill_aliases.skill_id`, `candidate_skill_reviews.suggested_skill_id`)
+    against their own org inside RLS — consistent with this codebase's
+    existing architecture decision (`docs/PROJECT_STATE.md` §8,
+    2026-09-14) that this kind of cross-table authorization belongs in
+    the Server Action that writes the row (the same `assertRoleIsVisible`
+    shape already used for `candidates.role_id`), not duplicated into
+    RLS. That verification is a future prompt's job (Prompts 3-4), once
+    the actions that write these tables actually exist.
+  - **Seed data inserted** exactly as listed in ATS_FEATURES.md: 7 skills
+    (TypeScript, JavaScript, Node.js, Python, Project Management,
+    Customer Support, Virtual Assistant) with all 17 listed aliases, and
+    5 locations (Quezon City/Taguig/Manila, all Metro Manila; Cebu City,
+    Cebu; Davao City, Davao del Sur) with all 6 listed aliases — inserted
+    via `ON CONFLICT DO NOTHING`, same idempotent pattern as the initial
+    schema migration's `org_settings` seed row, so re-running this
+    migration is harmless.
+  - **Checked whether the existing `ALTER DEFAULT PRIVILEGES` grants
+    migration covers these new tables automatically — concluded yes, no
+    new grants migration needed**, based on Postgres's documented
+    semantics: that migration's `ALTER DEFAULT PRIVILEGES IN SCHEMA
+    public ... GRANT ...` was run without `FOR ROLE`, so it applies
+    forward to any table later created *by the same executing role* —
+    and every migration in this repo, including this one, runs through
+    the same `supabase db push` mechanism as that grants migration. This
+    is the **first** migration since the grants fix that creates
+    brand-new tables (every migration between the two only added columns
+    to existing tables), so unlike those, this specific claim hasn't
+    actually been exercised yet — flagged in `docs/PROJECT_STATE.md` §6
+    as needing a real REST-level confirmation once applied, matching this
+    project's established "verified, not assumed" discipline for
+    migrations, rather than treating the Postgres-semantics reasoning
+    alone as sufficient proof.
+  - **Verified the migration itself against a disposable local Postgres
+    container** (a plain `postgres:16` Docker image with a minimal stub
+    of `profiles`/`roles`/`candidates`/`current_org_id()`, not the
+    project's real Supabase database, and not the unrelated `3pl-sourcing`
+    local Supabase container already running on this machine — left
+    completely untouched) — the full migration applied cleanly end to
+    end (extension, 8 tables, 4 new columns, 15 indexes, 23 RLS policies,
+    all 4 seed inserts), the seed data was queried back and confirmed to
+    match ATS_FEATURES.md's alias lists exactly (skill-by-skill,
+    location-by-location), the RLS policy list was queried back and
+    confirmed to match the intended per-table shape exactly (including
+    `interview_scorecards` correctly having no UPDATE/DELETE policy), and
+    the four new `candidates` columns were confirmed present with the
+    right types/defaults/constraints. The disposable container was
+    removed afterward. **This migration has not been applied to the
+    live project database** — no direct Postgres connection available to
+    Claude Code in this environment, same standing limitation as the
+    unapplied FK-behavior migration from the previous session (see
+    `docs/PROJECT_STATE.md` §6).
 - **Prompt 8: the "generate suggested message" feature, per BUILD_BRIEF.md
   §5 exactly** — single-shot generation on `/talent-acquisition/candidates/[id]`,
   not a chat thread. New `generateSuggestedMessage(candidateId, extraContext?)`
