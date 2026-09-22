@@ -2,29 +2,17 @@
 // this from a client component — pdf-parse/mammoth are Node-only
 // libraries with no browser build path used here (ATS_FEATURES.md
 // Prerequisites: "same pair used successfully on the 3PL project").
+//
+// pdf-parse is pinned to the 1.x line deliberately: 2.x rewrote itself
+// around pdfjs-dist, which imports browser canvas APIs (DOMMatrix) at
+// module evaluation time — that crashes any Node.js server environment
+// on import, not just Vercel's, and no workerSrc/Turbopack workaround
+// changes that (see docs/PROJECT_STATE.md's pdfjs-dist gotcha). 1.x is a
+// pure-JS module with no browser API dependency, which is what
+// ATS_FEATURES.md originally approved.
 
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { PDFParse } from "pdf-parse";
+import pdf from "pdf-parse";
 import { extractRawText } from "mammoth";
-
-// pdf-parse (via pdfjs-dist) resolves its worker module relative to its own
-// bundled `import.meta.url` when no workerSrc is set — under Turbopack's
-// dev SSR bundling, that sibling file isn't copied into the chunk output,
-// so the default resolution fails with "Setting up fake worker failed:
-// Cannot find module '.../pdf.worker.mjs'". Pointing workerSrc at an
-// absolute file:// URL resolved via Node's own module path (not a static
-// import Turbopack could try to bundle) sidesteps the broken relative
-// lookup entirely. Safe to call unconditionally — PDFParse.setWorker is
-// idempotent and cheap.
-PDFParse.setWorker(
-  pathToFileURL(
-    path.join(
-      process.cwd(),
-      "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
-    )
-  ).href
-);
 
 // Mirrors resume-actions.ts's ALLOWED_TYPES — the two file types this app
 // accepts for upload are the only two this app ever needs to extract text
@@ -43,8 +31,7 @@ export async function extractResumeText(
   mimeType: string
 ): Promise<string> {
   if (mimeType === "application/pdf") {
-    const parser = new PDFParse({ data: fileBytes });
-    const result = await parser.getText();
+    const result = await pdf(fileBytes);
     return result.text;
   }
   if (
