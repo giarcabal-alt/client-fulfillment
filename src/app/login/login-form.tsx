@@ -12,8 +12,8 @@ export function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    <form action={formAction} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
@@ -23,7 +23,7 @@ export function LoginForm() {
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="password">Password</Label>
         <Input
           id="password"

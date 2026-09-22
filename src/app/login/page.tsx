@@ -20,11 +20,13 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center bg-background p-8">
-      <Card className="w-full max-w-sm">
+    <div className="flex min-h-full flex-1 items-center justify-center bg-background p-6">
+      <Card size="sm" className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>
+          <CardTitle className="font-display text-base text-ink-navy">
+            Sign in
+          </CardTitle>
+          <CardDescription className="text-sm">
             Client Fulfillment App is invite-only. Contact us if you need
             access.
           </CardDescription>

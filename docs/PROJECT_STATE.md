@@ -346,6 +346,13 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
   - **Verified live via Playwright MCP** at 1440×900 (all 3 real teammates plus the invite form fit in one screen with vertical room to spare) and 375px (rows wrap to a readable multi-line layout, full email now visible after the `basis-full` fix, all buttons remain tappable). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 3 changed files.
   - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4 (the mobile truncation bug was caught and fixed before scoring, not after), Implementation Integrity 4/4.
 
+- **Density pass applied to the Login and Set Password pages (`/login`, `/set-password`) — built and fully verified, `/impeccable audit` scored 20/20 on both.** Both are a single centered auth `Card` around a two-field form; identical treatment applied to both since they share the exact same shape.
+  - `Card` switched to `size="sm"` (the primitive's own built-in compact variant — smaller `--card-spacing`, `CardTitle` down to its `text-sm` size at that size), `CardTitle` further set to `font-display text-base text-ink-navy` for the app's display-type convention, outer page padding `p-8`→`p-6`.
+  - `login-form.tsx`/`set-password-form.tsx`: form gap `gap-4`→`gap-3`, each field's label/input gap `gap-1.5`→`gap-1`. All Server Action wiring, `aria-describedby`/error handling, and `autoComplete` attributes preserved exactly.
+  - **Verified via HTML structure inspection rather than a live screenshot** — an unauthenticated `curl http://localhost:3000/login` (200 OK) confirmed the rendered markup carries the intended `data-[size=sm]` Card spacing and `font-display text-base text-ink-navy` title classes and the tightened gap classes; `curl .../set-password` correctly 307-redirects an unauthenticated request (auth guard unchanged). A live Playwright screenshot was deliberately skipped: navigating to `/login` in the already-authenticated session used for every other page in this task just redirects to the board, and signing out to see the real page would have risked losing the session other pages still needed — disclosed here rather than either faking a screenshot or silently skipping verification.
+  - Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 4 changed files.
+  - **`/impeccable audit` scored 20/20 (Excellent) on both pages** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4 (layout unchanged, already mobile-safe), Implementation Integrity 4/4.
+
 ## 5. IN PROGRESS
 
 Nothing in progress.

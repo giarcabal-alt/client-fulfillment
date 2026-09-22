@@ -15,8 +15,8 @@ export function SetPasswordForm() {
   );
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    <form action={formAction} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="password">New password</Label>
         <Input
           id="password"
@@ -28,7 +28,7 @@ export function SetPasswordForm() {
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="confirmPassword">Confirm password</Label>
         <Input
           id="confirmPassword"
