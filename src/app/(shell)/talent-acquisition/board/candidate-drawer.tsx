@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useTransition } from "react";
 import {
+  PropertyRow,
+  propertySelectTriggerClass,
+} from "@/components/ui/property-row";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -61,17 +65,17 @@ export function CandidateDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-col gap-4 px-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Stage
-            </span>
+        <div className="flex flex-col gap-1 px-4">
+          <PropertyRow label="Stage">
             <Select
               value={candidate.stage}
               onValueChange={handleStageChange}
               disabled={isPending}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                aria-label="Stage"
+                className={propertySelectTriggerClass}
+              >
                 <SelectValue>{(value: string) => stageLabelFor(value)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -82,19 +86,18 @@ export function CandidateDrawer({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </PropertyRow>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Next action
-            </span>
-            <StatusBadge status={status} action={action} className="w-fit" />
-            <p className="text-sm">{action.label}</p>
-          </div>
+          <PropertyRow label="Next action">
+            <div className="flex flex-col gap-1 py-1">
+              <StatusBadge status={status} action={action} className="w-fit" />
+              <p className="text-sm">{action.label}</p>
+            </div>
+          </PropertyRow>
 
           <Link
             href={`/talent-acquisition/candidates/${candidate.id}`}
-            className="w-fit rounded-sm text-sm text-work-blue underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="mt-2 w-fit rounded-sm text-sm text-work-blue underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             View full profile →
           </Link>

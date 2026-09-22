@@ -69,10 +69,10 @@ export default async function BoardPage() {
   });
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4 sm:p-8">
+    <div className="flex h-full flex-col gap-3 p-4 sm:p-6">
       <div className="min-w-0">
-        <h1 className="text-2xl">Talent Acquisition Desk</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="font-display text-xl text-ink-navy">Talent Acquisition Desk</h1>
+        <p className="text-sm text-muted-foreground">
           The candidate pipeline, Talent Pool included.
         </p>
       </div>

@@ -34,10 +34,10 @@ export function CandidateCard({
         type="button"
         onClick={onClick}
         aria-label={`Open ${name}${roleTitle ? `, ${roleTitle}` : ""} — ${STATUS_BADGE_LABELS[status](action)}`}
-        className="flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-3 text-left outline-none"
+        className="flex w-full cursor-pointer flex-col gap-1 rounded-xl p-2 text-left outline-none"
       >
-        <div className="truncate font-medium">{name}</div>
-        <div className="truncate text-sm text-muted-foreground">
+        <div className="truncate text-sm font-medium">{name}</div>
+        <div className="truncate text-xs text-muted-foreground">
           {roleTitle ?? "No role set"}
         </div>
         <div className="truncate text-xs text-muted-foreground">

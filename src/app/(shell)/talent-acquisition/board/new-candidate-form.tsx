@@ -157,8 +157,8 @@ export function NewCandidateForm({
   const [state, formAction, isPending] = useActionState(action, initialState);
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
           Resume (optional)
         </span>
@@ -201,7 +201,7 @@ export function NewCandidateForm({
         <input type="hidden" name="staged_resume_path" value={stagingPath ?? ""} />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-candidate-name">Name</Label>
         <Input
           id="new-candidate-name"
@@ -213,7 +213,7 @@ export function NewCandidateForm({
       </div>
 
       {skillChips.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Skills from resume — edit or remove any that aren&apos;t right
           </span>
@@ -269,7 +269,7 @@ export function NewCandidateForm({
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-candidate-role">Role</Label>
         <Select value={roleChoice} onValueChange={(v) => v && setRoleChoice(v)}>
           <SelectTrigger id="new-candidate-role" className="w-full">
@@ -294,7 +294,7 @@ export function NewCandidateForm({
       </div>
 
       {roleMode === "new" && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <Label htmlFor="new-candidate-new-role-title">New role title</Label>
           <Input
             id="new-candidate-new-role-title"
@@ -305,7 +305,7 @@ export function NewCandidateForm({
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-candidate-location">Location</Label>
         <Select
           value={locationChoice}
@@ -330,7 +330,7 @@ export function NewCandidateForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-candidate-notes">Notes (optional)</Label>
         <Input
           id="new-candidate-notes"
@@ -339,7 +339,7 @@ export function NewCandidateForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-candidate-source">Source (optional)</Label>
         <Select
           value={sourcePlatform}

@@ -117,16 +117,16 @@ export function BoardClient({
   }, [selectedId, candidates]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+    <div className="flex flex-1 flex-col gap-3 overflow-hidden">
       <div className="flex items-center justify-between gap-4">
         <Input
           aria-label="Search candidates"
           placeholder="Search by name, role, or skill…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="h-8 max-w-sm text-sm"
         />
-        <Button onClick={() => setAddOpen(true)} className="shrink-0">
+        <Button size="sm" onClick={() => setAddOpen(true)} className="shrink-0">
           + New Candidate
         </Button>
       </div>
@@ -147,20 +147,20 @@ export function BoardClient({
       </Dialog>
 
       <div className="flex flex-1 flex-col gap-2 overflow-hidden">
-        <div ref={scrollRef} className="board-scrollbar flex flex-1 gap-3 overflow-x-auto">
+        <div ref={scrollRef} className="board-scrollbar flex flex-1 gap-2 overflow-x-auto">
         {columns.map(({ stage, cards }) => (
-          <div key={stage.key} className="min-w-[140px] flex-1">
-            <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-border bg-stone px-3 py-2">
-              <span className="min-w-0 flex-1 truncate font-display text-sm text-ink-navy">
+          <div key={stage.key} className="min-w-[132px] flex-1">
+            <div className="flex items-center justify-between rounded-t-xl border border-b-0 border-border bg-stone px-2.5 py-1.5">
+              <span className="min-w-0 flex-1 truncate font-display text-xs font-semibold text-ink-navy">
                 {stage.label}
               </span>
-              <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                 {cards.length}
               </span>
             </div>
-            <div className="flex min-h-32 flex-col gap-2 rounded-b-xl border border-border bg-warm-paper p-2">
+            <div className="flex min-h-24 flex-col gap-1.5 rounded-b-xl border border-border bg-warm-paper p-1.5">
               {cards.length === 0 && (
-                <p className="p-2 text-sm italic text-muted-foreground">
+                <p className="p-2 text-xs italic text-muted-foreground">
                   No one here yet
                 </p>
               )}
