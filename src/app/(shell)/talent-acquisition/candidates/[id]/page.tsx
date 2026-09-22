@@ -63,7 +63,7 @@ export default async function CandidateDetailPage({
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, resume_path, location_id, status, decline_reason, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, resume_path, location_id, status, decline_reason, years_experience, last_role, last_company, employment_status, notice_period, expected_compensation, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -164,6 +164,12 @@ export default async function CandidateDetailPage({
     location_id: candidateRow.location_id as string | null,
     status: candidateRow.status as "active" | "rejected",
     decline_reason: candidateRow.decline_reason as string | null,
+    years_experience: candidateRow.years_experience as number | null,
+    last_role: candidateRow.last_role as string | null,
+    last_company: candidateRow.last_company as string | null,
+    employment_status: candidateRow.employment_status as string | null,
+    notice_period: candidateRow.notice_period as string | null,
+    expected_compensation: candidateRow.expected_compensation as string | null,
   };
 
   const roles = (rolesData ?? []) as { id: string; title: string }[];

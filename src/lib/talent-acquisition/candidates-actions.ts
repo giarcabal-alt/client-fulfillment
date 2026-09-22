@@ -10,6 +10,12 @@ import {
   type SubmittedSkillChip,
 } from "@/lib/talent-acquisition/resume-parse-core";
 import {
+  EMPLOYMENT_STATUSES,
+  NOTICE_PERIODS,
+  type EmploymentStatus,
+  type NoticePeriod,
+} from "@/lib/talent-acquisition/employment-fields";
+import {
   SOURCE_PLATFORMS,
   type SourcePlatform,
 } from "@/lib/talent-acquisition/source-platforms";
@@ -573,6 +579,158 @@ export async function rejectCandidate(
 
   revalidatePath(BOARD_PATH);
   revalidatePath(REJECTED_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+// Talent Bench fields (see the migration adding years_experience/
+// last_role/last_company/employment_status/notice_period/
+// expected_compensation to `candidates`) — six independent save-on-blur/
+// on-change fields on the candidate detail page, same one-action-per-field
+// shape as notes/tags/source_platform above. All optional; none of these
+// block candidate creation or any other existing flow.
+const TALENT_BENCH_PATH = "/talent-acquisition/talent-bench";
+
+export async function updateCandidateYearsExperience(
+  id: string,
+  years: number | null
+): Promise<CandidateActionState> {
+  if (years !== null && (!Number.isFinite(years) || years < 0)) {
+    return { error: "Years of experience must be a non-negative number." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ years_experience: years })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update years of experience:", error);
+    return { error: "Couldn't save years of experience. Please try again." };
+  }
+
+  revalidatePath(TALENT_BENCH_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateLastRole(
+  id: string,
+  lastRole: string
+): Promise<CandidateActionState> {
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ last_role: lastRole.trim() || null })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update last role:", error);
+    return { error: "Couldn't save the last role. Please try again." };
+  }
+
+  revalidatePath(TALENT_BENCH_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateLastCompany(
+  id: string,
+  lastCompany: string
+): Promise<CandidateActionState> {
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ last_company: lastCompany.trim() || null })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update last company:", error);
+    return { error: "Couldn't save the last company. Please try again." };
+  }
+
+  revalidatePath(TALENT_BENCH_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateEmploymentStatus(
+  id: string,
+  employmentStatus: string | null
+): Promise<CandidateActionState> {
+  if (
+    employmentStatus !== null &&
+    !EMPLOYMENT_STATUSES.includes(employmentStatus as EmploymentStatus)
+  ) {
+    return { error: "Choose a valid employment status." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ employment_status: employmentStatus })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update employment status:", error);
+    return { error: "Couldn't save employment status. Please try again." };
+  }
+
+  revalidatePath(TALENT_BENCH_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateNoticePeriod(
+  id: string,
+  noticePeriod: string | null
+): Promise<CandidateActionState> {
+  if (
+    noticePeriod !== null &&
+    !NOTICE_PERIODS.includes(noticePeriod as NoticePeriod)
+  ) {
+    return { error: "Choose a valid notice period." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ notice_period: noticePeriod })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update notice period:", error);
+    return { error: "Couldn't save the notice period. Please try again." };
+  }
+
+  revalidatePath(TALENT_BENCH_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+export async function updateCandidateExpectedCompensation(
+  id: string,
+  expectedCompensation: string
+): Promise<CandidateActionState> {
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ expected_compensation: expectedCompensation.trim() || null })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update expected compensation:", error);
+    return { error: "Couldn't save expected compensation. Please try again." };
+  }
+
+  revalidatePath(TALENT_BENCH_PATH);
   revalidatePath(candidatePath(id));
   return { error: null };
 }

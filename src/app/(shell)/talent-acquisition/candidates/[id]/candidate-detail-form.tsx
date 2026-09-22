@@ -17,18 +17,32 @@ import {
 import {
   reassignCandidateRole,
   updateCandidateCommunicationRating,
+  updateCandidateEmploymentStatus,
+  updateCandidateExpectedCompensation,
+  updateCandidateLastCompany,
+  updateCandidateLastRole,
   updateCandidateLocation,
+  updateCandidateNoticePeriod,
   updateCandidateNotes,
   updateCandidateSourcePlatform,
   updateCandidateStage,
   updateCandidateTags,
+  updateCandidateYearsExperience,
 } from "@/lib/talent-acquisition/candidates-actions";
+import {
+  EMPLOYMENT_STATUS_LABELS,
+  EMPLOYMENT_STATUSES,
+  NOTICE_PERIOD_LABELS,
+  NOTICE_PERIODS,
+} from "@/lib/talent-acquisition/employment-fields";
 import { SOURCE_PLATFORMS } from "@/lib/talent-acquisition/source-platforms";
 
 const NO_ROLE_VALUE = "none";
 const NO_SOURCE_VALUE = "none";
 const NO_RATING_VALUE = "unrated";
 const NO_LOCATION_VALUE = "none";
+const NO_EMPLOYMENT_STATUS_VALUE = "none";
+const NO_NOTICE_PERIOD_VALUE = "none";
 
 type Candidate = {
   id: string;
@@ -39,6 +53,12 @@ type Candidate = {
   source_platform: string | null;
   communication_rating: number | null;
   location_id: string | null;
+  years_experience: number | null;
+  last_role: string | null;
+  last_company: string | null;
+  employment_status: string | null;
+  notice_period: string | null;
+  expected_compensation: string | null;
 };
 
 export function CandidateDetailForm({
@@ -66,6 +86,20 @@ export function CandidateDetailForm({
   );
   const [locationId, setLocationId] = useState(
     candidate.location_id ?? NO_LOCATION_VALUE
+  );
+  const [yearsExperience, setYearsExperience] = useState(
+    candidate.years_experience != null ? String(candidate.years_experience) : ""
+  );
+  const [lastRole, setLastRole] = useState(candidate.last_role ?? "");
+  const [lastCompany, setLastCompany] = useState(candidate.last_company ?? "");
+  const [employmentStatus, setEmploymentStatus] = useState(
+    candidate.employment_status ?? NO_EMPLOYMENT_STATUS_VALUE
+  );
+  const [noticePeriod, setNoticePeriod] = useState(
+    candidate.notice_period ?? NO_NOTICE_PERIOD_VALUE
+  );
+  const [expectedCompensation, setExpectedCompensation] = useState(
+    candidate.expected_compensation ?? ""
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -168,6 +202,97 @@ export function CandidateDetailForm({
         setLocationId(previous);
       }
     });
+  }
+
+  function saveYearsExperience() {
+    const trimmed = yearsExperience.trim();
+    const parsed = trimmed === "" ? null : Number(trimmed);
+    const previous = candidate.years_experience;
+    if (parsed === previous || (parsed != null && Number.isNaN(parsed))) {
+      if (parsed != null && Number.isNaN(parsed)) {
+        setError("Years of experience must be a number.");
+      }
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateYearsExperience(candidate.id, parsed);
+      if (result.error) setError(result.error);
+    });
+  }
+
+  function saveLastRole() {
+    if (lastRole.trim() === (candidate.last_role ?? "")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateLastRole(candidate.id, lastRole);
+      if (result.error) setError(result.error);
+    });
+  }
+
+  function saveLastCompany() {
+    if (lastCompany.trim() === (candidate.last_company ?? "")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateLastCompany(candidate.id, lastCompany);
+      if (result.error) setError(result.error);
+    });
+  }
+
+  function handleEmploymentStatusChange(next: string | null) {
+    if (!next || next === employmentStatus) return;
+    const previous = employmentStatus;
+    setEmploymentStatus(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateEmploymentStatus(
+        candidate.id,
+        next === NO_EMPLOYMENT_STATUS_VALUE ? null : next
+      );
+      if (result.error) {
+        setError(result.error);
+        setEmploymentStatus(previous);
+      }
+    });
+  }
+
+  function handleNoticePeriodChange(next: string | null) {
+    if (!next || next === noticePeriod) return;
+    const previous = noticePeriod;
+    setNoticePeriod(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateNoticePeriod(
+        candidate.id,
+        next === NO_NOTICE_PERIOD_VALUE ? null : next
+      );
+      if (result.error) {
+        setError(result.error);
+        setNoticePeriod(previous);
+      }
+    });
+  }
+
+  function saveExpectedCompensation() {
+    if (expectedCompensation.trim() === (candidate.expected_compensation ?? "")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await updateCandidateExpectedCompensation(
+        candidate.id,
+        expectedCompensation
+      );
+      if (result.error) setError(result.error);
+    });
+  }
+
+  function employmentStatusLabelFor(value: string) {
+    if (value === NO_EMPLOYMENT_STATUS_VALUE) return "Not set";
+    return EMPLOYMENT_STATUS_LABELS[value as keyof typeof EMPLOYMENT_STATUS_LABELS] ?? value;
+  }
+
+  function noticePeriodLabelFor(value: string) {
+    if (value === NO_NOTICE_PERIOD_VALUE) return "Not set";
+    return NOTICE_PERIOD_LABELS[value as keyof typeof NOTICE_PERIOD_LABELS] ?? value;
   }
 
   function stageLabelFor(value: string) {
@@ -314,6 +439,128 @@ export function CandidateDetailForm({
               {locations.map((location) => (
                 <SelectItem key={location.id} value={location.id}>
                   {location.city}, {location.province}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="candidate-last-role"
+            className="text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            Last role
+          </label>
+          <Input
+            id="candidate-last-role"
+            value={lastRole}
+            onChange={(e) => setLastRole(e.target.value)}
+            onBlur={saveLastRole}
+            disabled={isPending}
+            placeholder="e.g. Senior Backend Engineer"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="candidate-last-company"
+            className="text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            Last company
+          </label>
+          <Input
+            id="candidate-last-company"
+            value={lastCompany}
+            onChange={(e) => setLastCompany(e.target.value)}
+            onBlur={saveLastCompany}
+            disabled={isPending}
+            placeholder="e.g. Acme Corp"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="candidate-years-experience"
+            className="text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            Years of experience
+          </label>
+          <Input
+            id="candidate-years-experience"
+            type="number"
+            min="0"
+            step="0.5"
+            value={yearsExperience}
+            onChange={(e) => setYearsExperience(e.target.value)}
+            onBlur={saveYearsExperience}
+            disabled={isPending}
+            placeholder="e.g. 5"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="candidate-expected-compensation"
+            className="text-xs uppercase tracking-wide text-muted-foreground"
+          >
+            Expected compensation
+          </label>
+          <Input
+            id="candidate-expected-compensation"
+            value={expectedCompensation}
+            onChange={(e) => setExpectedCompensation(e.target.value)}
+            onBlur={saveExpectedCompensation}
+            disabled={isPending}
+            placeholder="e.g. ₱80k/mo or $2,000/mo"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Employment status
+          </span>
+          <Select
+            value={employmentStatus}
+            onValueChange={handleEmploymentStatusChange}
+            disabled={isPending}
+          >
+            <SelectTrigger aria-label="Employment status">
+              <SelectValue>
+                {(value: string) => employmentStatusLabelFor(value)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_EMPLOYMENT_STATUS_VALUE}>Not set</SelectItem>
+              {EMPLOYMENT_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {EMPLOYMENT_STATUS_LABELS[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            Notice period
+          </span>
+          <Select
+            value={noticePeriod}
+            onValueChange={handleNoticePeriodChange}
+            disabled={isPending}
+          >
+            <SelectTrigger aria-label="Notice period">
+              <SelectValue>{(value: string) => noticePeriodLabelFor(value)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_NOTICE_PERIOD_VALUE}>Not set</SelectItem>
+              {NOTICE_PERIODS.map((period) => (
+                <SelectItem key={period} value={period}>
+                  {NOTICE_PERIOD_LABELS[period]}
                 </SelectItem>
               ))}
             </SelectContent>

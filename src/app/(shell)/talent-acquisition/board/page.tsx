@@ -60,7 +60,13 @@ export default async function BoardPage() {
             The candidate pipeline, Talent Pool included.
           </p>
         </div>
-        <div className="mt-1 flex shrink-0 items-center gap-4">
+        <div className="mt-1 flex shrink-0 flex-wrap items-center gap-4">
+          <Link
+            href="/talent-acquisition/talent-bench"
+            className="text-sm text-work-blue underline"
+          >
+            Talent Bench
+          </Link>
           <Link
             href="/talent-acquisition/rejected"
             className="text-sm text-work-blue underline"
