@@ -1,10 +1,5 @@
 import { notFound } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Section, SectionDivider } from "@/components/ui/section";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { InviteUserForm } from "./invite-user-form";
@@ -61,10 +56,10 @@ export default async function AdminPage() {
     .sort((a, b) => a.email.localeCompare(b.email));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-3 p-4 sm:p-6">
       <div>
-        <h1 className="text-2xl">Admin</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="font-display text-xl text-ink-navy">Admin</h1>
+        <p className="text-sm text-muted-foreground">
           Manage teammates and their access.
         </p>
       </div>
@@ -75,24 +70,34 @@ export default async function AdminPage() {
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Invite a teammate</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Section>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-ink-navy">
+            Invite a teammate
+          </span>
           <InviteUserForm />
-        </CardContent>
-      </Card>
-
-      {users.length === 0 ? (
-        <p className="text-muted-foreground">No users yet.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {users.map((u) => (
-            <UserRow key={u.id} user={u} />
-          ))}
         </div>
-      )}
+
+        <SectionDivider className="my-3" />
+
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-ink-navy">
+            Teammates
+          </span>
+          {users.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No users yet.</p>
+          ) : (
+            <div className="-mx-4 flex flex-col">
+              {users.map((u, i) => (
+                <div key={u.id}>
+                  {i > 0 && <SectionDivider />}
+                  <UserRow user={u} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Section>
     </div>
   );
 }

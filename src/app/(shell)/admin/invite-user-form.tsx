@@ -27,7 +27,7 @@ export function InviteUserForm() {
       action={formAction}
       className="flex flex-wrap items-end gap-3"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <Label htmlFor="invite-email">Email</Label>
         <Input
           id="invite-email"

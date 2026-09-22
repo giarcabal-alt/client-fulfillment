@@ -339,6 +339,13 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
   - **Verified live via Playwright MCP** at 1440×900 (the whole page — header, both field groups, all helper text — fits with substantial vertical room to spare, no scrolling needed) and 375px (single column, divider and helper text wrap cleanly). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across both changed files.
   - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4 (save-on-blur a11y wiring untouched), Performance 4/4, Theming 4/4, Responsive Design 4/4, Implementation Integrity 4/4.
 
+- **Density pass applied to the Admin page (`/admin`) — built and fully verified live, `/impeccable audit` scored 20/20.** Task-specific goal: fit on one screen at 1440×900 where the content allows.
+  - `page.tsx` rewritten from a Card ("Invite a teammate") plus one Card per user to a single `Section` with a `SectionDivider` between "Invite a teammate" and "Teammates," the user list itself using `SectionDivider`-separated rows (a `-mx-4` wrapper so each row's own `px-4` lines up with the Section's edges, the same trick `PropertyRow` uses at `-mx-2`).
+  - `user-row.tsx`: each user is now a plain padded row (`px-4 py-2.5`), not its own `Card`; the display-name field switched from `Input` to a plain `input` on `propertyControlClass` for the hover-to-edit affordance. Fixed a real mobile regression caught during verification: the email/display-name column and the role/action controls originally fought for the same row at 375px, truncating the email mid-domain (`examp…`) — fixed with `basis-full sm:basis-auto sm:flex-1` so the identity column takes its own full-width line below `sm`, then rejoins the row at desktop widths. All dialogs (reset password, delete), the shared error region, and the `aria-live` "Reset email sent" confirmation preserved exactly.
+  - `invite-user-form.tsx`: field gap tightened `gap-1.5`→`gap-1`; left as its own single-row inline form (not a dialog) since it was already compact and doesn't dominate the page.
+  - **Verified live via Playwright MCP** at 1440×900 (all 3 real teammates plus the invite form fit in one screen with vertical room to spare) and 375px (rows wrap to a readable multi-line layout, full email now visible after the `basis-full` fix, all buttons remain tappable). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 3 changed files.
+  - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4 (the mobile truncation bug was caught and fixed before scoring, not after), Implementation Integrity 4/4.
+
 ## 5. IN PROGRESS
 
 Nothing in progress.

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { propertyControlClass } from "@/components/ui/property-row";
 import {
   Dialog,
   DialogClose,
@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -123,11 +122,11 @@ export function UserRow({ user }: { user: AdminUser }) {
   }
 
   return (
-    <Card className="p-4">
+    <div className="px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
           <p className="truncate text-sm font-medium">{user.email}</p>
-          <Input
+          <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             onBlur={saveDisplayName}
@@ -135,7 +134,7 @@ export function UserRow({ user }: { user: AdminUser }) {
             placeholder="Display name"
             aria-label="Display name"
             aria-describedby={error ? errorId : undefined}
-            className="max-w-xs"
+            className={cn(propertyControlClass, "w-auto max-w-xs -ml-1.5")}
           />
         </div>
         <Select value={role} onValueChange={saveRole}>
@@ -230,6 +229,6 @@ export function UserRow({ user }: { user: AdminUser }) {
       <span role="status" aria-live="polite" className="sr-only">
         {resetSent ? "Reset email sent" : ""}
       </span>
-    </Card>
+    </div>
   );
 }
