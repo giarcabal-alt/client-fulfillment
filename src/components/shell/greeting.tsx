@@ -30,7 +30,7 @@ export function Greeting({ displayName }: { displayName: string | null }) {
   );
 
   return (
-    <p className="mb-6 text-sm text-sidebar-foreground">
+    <p className="mb-3 text-sm text-sidebar-foreground">
       <span className="text-sidebar-foreground/60" suppressHydrationWarning>
         {greeting},
       </span>{" "}

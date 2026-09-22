@@ -43,7 +43,7 @@ export default async function ShellLayout({
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
-      <aside className="hidden w-64 shrink-0 flex-col justify-between bg-sidebar p-4 text-sidebar-foreground md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col justify-between bg-sidebar p-3 text-sidebar-foreground md:flex">
         <div>
           <Wordmark />
           <SidebarNav isAdmin={isAdmin} />

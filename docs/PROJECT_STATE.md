@@ -353,6 +353,15 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
   - Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 4 changed files.
   - **`/impeccable audit` scored 20/20 (Excellent) on both pages** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4 (layout unchanged, already mobile-safe), Implementation Integrity 4/4.
 
+- **Density pass applied to the sidebar itself — built and fully verified live, `/impeccable audit` scored 20/20.** Last surface of the "other pages" follow-up prompt.
+  - `(shell)/layout.tsx`: `<aside>` narrowed `w-64`→`w-60` (256px→240px) and its padding tightened `p-4`→`p-3`, freeing extra width for every page's content column (confirmed no other file hardcoded the old 256px width via a repo-wide grep before changing it).
+  - `wordmark.tsx`/`greeting.tsx`: the generous `mb-6` gap below the wordmark and above the sign-out button tightened to `mb-4`/`mb-3` respectively — `sidebar-nav.tsx` itself was already at the density scale (`text-sm` links, `py-1.5`/`py-2` rows) and needed no changes.
+  - **Re-verified the sidebar's full-height fill after the width/padding change** (the same check run during the candidate-detail-page density pass, which found nothing to fix at the time): `aside.offsetHeight` still matches `document.documentElement.scrollHeight`/`window.innerHeight` exactly post-change.
+  - **Verified live via Playwright MCP** at 1440×900 (narrower sidebar, Board's 7 pipeline columns now fit with visibly more breathing room) and 375px (unaffected — `MobileNav` is a separate component from `<aside>`, confirmed unchanged). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 4 changed files.
+  - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4, Implementation Integrity 4/4.
+
+**This closes out the "other pages" density follow-up in full**: Board, Job Openings, Talent Bench, Settings, Admin, Login, Set Password, and the sidebar have all been rebuilt on the `PropertyRow`/`Section` primitives from the candidate detail page pass, each independently verified live and scored 20/20 by `/impeccable audit`, each committed separately.
+
 ## 5. IN PROGRESS
 
 Nothing in progress.
