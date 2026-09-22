@@ -3,8 +3,7 @@
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { propertyControlClass } from "@/components/ui/property-row";
 import {
   Select,
   SelectContent,
@@ -29,7 +28,7 @@ import {
 
 type RoleClassification = "embedded_operator" | "project_based";
 
-type Role = {
+export type Role = {
   id: string;
   title: string;
   job_description: string | null;
@@ -65,6 +64,8 @@ const CLASSIFICATION_DOT: Partial<Record<RoleClassification, string>> = {
   project_based: "bg-sun-gold",
 };
 
+const JD_PREVIEW_LENGTH = 90;
+
 export function RoleRow({ role }: { role: Role }) {
   const [title, setTitle] = useState(role.title);
   const [jobDescription, setJobDescription] = useState(
@@ -79,6 +80,7 @@ export function RoleRow({ role }: { role: Role }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [jdOpen, setJdOpen] = useState(false);
 
   function saveTitle() {
     if (title.trim() === role.title) return;
@@ -155,94 +157,103 @@ export function RoleRow({ role }: { role: Role }) {
     });
   }
 
+  const jdPreview = jobDescription
+    ? jobDescription.length > JD_PREVIEW_LENGTH
+      ? `${jobDescription.slice(0, JD_PREVIEW_LENGTH).trimEnd()}…`
+      : jobDescription
+    : "No job description";
+
   return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={saveTitle}
-              disabled={isPending}
-              className="max-w-sm font-medium"
-              aria-label="Role title"
-            />
-            <Select value={status} onValueChange={saveStatus}>
-              <SelectTrigger size="sm" disabled={isPending} aria-label="Status">
-                <SelectValue>
-                  <Badge className={cn(STATUS_STYLES[status])}>
-                    {STATUS_LABELS[status]}
-                  </Badge>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="filled">Filled</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={classification} onValueChange={saveClassification}>
-              <SelectTrigger size="sm" disabled={isPending} aria-label="Classification">
-                <SelectValue>
-                  {classification === NO_CLASSIFICATION_VALUE ? (
-                    <span className="text-sm text-muted-foreground">
-                      No classification
-                    </span>
-                  ) : (
-                    <Badge
-                      className={cn(
-                        CLASSIFICATION_STYLES[
-                          classification as RoleClassification
-                        ]
-                      )}
-                    >
-                      {CLASSIFICATION_DOT[
-                        classification as RoleClassification
-                      ] && (
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            "size-1.5 shrink-0 rounded-full",
-                            CLASSIFICATION_DOT[
-                              classification as RoleClassification
-                            ]
-                          )}
-                        />
-                      )}
-                      {
-                        CLASSIFICATION_LABELS[
-                          classification as RoleClassification
-                        ]
-                      }
-                    </Badge>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_CLASSIFICATION_VALUE}>
+    <div className="flex flex-col gap-1.5 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={saveTitle}
+          disabled={isPending}
+          aria-label="Role title"
+          className={cn(propertyControlClass, "w-auto min-w-[10ch] flex-1 font-medium")}
+        />
+        <Select value={status} onValueChange={saveStatus}>
+          <SelectTrigger size="sm" disabled={isPending} aria-label="Status">
+            <SelectValue>
+              <Badge className={cn(STATUS_STYLES[status])}>
+                {STATUS_LABELS[status]}
+              </Badge>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="filled">Filled</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={classification} onValueChange={saveClassification}>
+          <SelectTrigger size="sm" disabled={isPending} aria-label="Classification">
+            <SelectValue>
+              {classification === NO_CLASSIFICATION_VALUE ? (
+                <span className="text-xs text-muted-foreground">
                   No classification
-                </SelectItem>
-                <SelectItem value="embedded_operator">
-                  Embedded Operator
-                </SelectItem>
-                <SelectItem value="project_based">Project-Based</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm tabular-nums text-muted-foreground">
-              {role.candidateCount}{" "}
-              {role.candidateCount === 1 ? "candidate" : "candidates"}
-            </span>
-          </div>
-          <Input
-            value={timezoneOverlap}
-            onChange={(e) => setTimezoneOverlap(e.target.value)}
-            onBlur={saveTimezoneOverlap}
-            disabled={isPending}
-            placeholder="Timezone overlap, e.g. 4hrs PHT/EST"
-            aria-label="Timezone overlap"
-            className="max-w-sm"
-          />
+                </span>
+              ) : (
+                <Badge
+                  className={cn(
+                    CLASSIFICATION_STYLES[classification as RoleClassification]
+                  )}
+                >
+                  {CLASSIFICATION_DOT[classification as RoleClassification] && (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        CLASSIFICATION_DOT[classification as RoleClassification]
+                      )}
+                    />
+                  )}
+                  {CLASSIFICATION_LABELS[classification as RoleClassification]}
+                </Badge>
+              )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_CLASSIFICATION_VALUE}>
+              No classification
+            </SelectItem>
+            <SelectItem value="embedded_operator">
+              Embedded Operator
+            </SelectItem>
+            <SelectItem value="project_based">Project-Based</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {role.candidateCount}{" "}
+          {role.candidateCount === 1 ? "candidate" : "candidates"}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={isPending}
+          onClick={handleDelete}
+          className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          Delete
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {timezoneOverlap && <span>{timezoneOverlap}</span>}
+        <button
+          type="button"
+          onClick={() => setJdOpen((v) => !v)}
+          className="rounded-sm text-work-blue outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {jdOpen ? "Hide job description" : jdPreview}
+        </button>
+      </div>
+
+      {jdOpen && (
+        <div className="flex flex-col gap-1">
           <Textarea
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
@@ -250,19 +261,22 @@ export function RoleRow({ role }: { role: Role }) {
             disabled={isPending}
             placeholder="Job description…"
             aria-label="Job description"
+            className="text-sm"
             rows={3}
           />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          <input
+            value={timezoneOverlap}
+            onChange={(e) => setTimezoneOverlap(e.target.value)}
+            onBlur={saveTimezoneOverlap}
+            disabled={isPending}
+            placeholder="Timezone overlap, e.g. 4hrs PHT/EST"
+            aria-label="Timezone overlap"
+            className={cn(propertyControlClass, "w-full max-w-xs")}
+          />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isPending}
-          onClick={handleDelete}
-        >
-          Delete
-        </Button>
-      </div>
-    </Card>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
   );
 }

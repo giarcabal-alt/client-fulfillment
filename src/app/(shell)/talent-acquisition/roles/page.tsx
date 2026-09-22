@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
-import { NewRoleForm } from "./new-role-form";
-import { RoleRow } from "./role-row";
+import { RolesList } from "./roles-list";
 
 export default async function RolesPage() {
   const supabase = await createClient();
@@ -38,29 +31,20 @@ export default async function RolesPage() {
   }));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
-      <div>
+    <div className="mx-auto flex max-w-3xl flex-col gap-3 p-4 sm:p-6">
+      <div className="min-w-0">
         <Button
           variant="outline"
           size="sm"
-          className="mb-3"
+          className="mb-2"
           nativeButton={false}
           render={<Link href="/talent-acquisition/board">← Back to board</Link>}
         />
-        <h1 className="text-2xl">Roles</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="font-display text-xl text-ink-navy">Job Openings</h1>
+        <p className="text-sm text-muted-foreground">
           Open requisitions candidates can be assigned to.
         </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Add a role</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <NewRoleForm />
-        </CardContent>
-      </Card>
 
       {error && (
         <p className="text-sm text-destructive">
@@ -68,17 +52,7 @@ export default async function RolesPage() {
         </p>
       )}
 
-      {!error && roles.length === 0 && (
-        <p className="text-muted-foreground">
-          No roles yet — add one above to get started.
-        </p>
-      )}
-
-      <div className="flex flex-col gap-4">
-        {roles.map((role) => (
-          <RoleRow key={role.id} role={role} />
-        ))}
-      </div>
+      {!error && <RolesList roles={roles} />}
     </div>
   );
 }

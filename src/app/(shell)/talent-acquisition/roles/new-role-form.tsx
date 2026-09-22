@@ -20,7 +20,7 @@ import {
 
 const initialState: RoleActionState = { error: null };
 
-export function NewRoleForm() {
+export function NewRoleForm({ onSuccess }: { onSuccess?: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [classification, setClassification] = useState(NO_CLASSIFICATION_VALUE);
 
@@ -29,6 +29,7 @@ export function NewRoleForm() {
     if (!result.error) {
       formRef.current?.reset();
       setClassification(NO_CLASSIFICATION_VALUE);
+      onSuccess?.();
     }
     return result;
   }
@@ -36,16 +37,16 @@ export function NewRoleForm() {
   const [state, formAction, isPending] = useActionState(action, initialState);
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-3 pt-1">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-role-title">Title</Label>
         <Input id="new-role-title" name="title" required />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-role-job-description">Job description</Label>
         <Textarea id="new-role-job-description" name="job_description" rows={3} />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-role-timezone-overlap">Timezone overlap</Label>
         <Input
           id="new-role-timezone-overlap"
@@ -53,7 +54,7 @@ export function NewRoleForm() {
           placeholder="e.g. 4hrs PHT/EST"
         />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <Label htmlFor="new-role-classification">Classification</Label>
         <Select value={classification} onValueChange={(v) => v && setClassification(v)}>
           <SelectTrigger id="new-role-classification" className="w-full">
