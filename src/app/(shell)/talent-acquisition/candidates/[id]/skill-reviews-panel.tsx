@@ -1,6 +1,14 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { createPortal } from "react-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +46,12 @@ function SkillSearchCombobox({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const listboxId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -46,6 +60,28 @@ function SkillSearchCombobox({
       : skills;
     return matches.slice(0, MAX_SEARCH_RESULTS);
   }, [query, skills]);
+
+  // Portaled to document.body (below) rather than rendered inline, since
+  // this combobox lives inside a Card and an inline-positioned dropdown
+  // gets clipped by the card's box — the same category of bug as the
+  // board's scroll-clipping issue, just manifesting as clipping instead
+  // of scrolling. Position is tracked in viewport coordinates (`fixed`)
+  // and recomputed on scroll/resize so it stays pinned to the input.
+  useEffect(() => {
+    if (!isOpen) return;
+    function updatePosition() {
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPosition({ top: rect.bottom, left: rect.left, width: rect.width });
+    }
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen]);
 
   function pick(skillId: string) {
     setIsOpen(false);
@@ -73,8 +109,9 @@ function SkillSearchCombobox({
   const optionId = (skillId: string) => `${listboxId}-${skillId}`;
 
   return (
-    <div className="relative flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <Input
+        ref={inputRef}
         role="combobox"
         aria-label={label}
         aria-expanded={isOpen}
@@ -99,40 +136,50 @@ function SkillSearchCombobox({
         }}
         onKeyDown={handleKeyDown}
       />
-      {isOpen && results.length > 0 && (
-        <ul
-          id={listboxId}
-          role="listbox"
-          aria-label={label}
-          className="absolute top-full z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-border bg-popover py-1 shadow-md"
-        >
-          {results.map((skill, i) => (
-            <li key={skill.id} role="presentation">
-              {/* Not an independent tab stop — a combobox's options are
-                  selected via aria-activedescendant while focus stays on
-                  the input (ArrowDown/Up/Enter above), the same reason the
-                  hidden file input elsewhere on this page uses
-                  tabIndex={-1} rather than being reachable on its own. */}
-              <button
-                id={optionId(skill.id)}
-                type="button"
-                role="option"
-                tabIndex={-1}
-                aria-selected={i === highlightedIndex}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pick(skill.id)}
-                className={
-                  i === highlightedIndex
-                    ? "w-full px-3 py-1.5 text-left text-sm bg-accent text-accent-foreground"
-                    : "w-full px-3 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                }
-              >
-                {skill.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {isOpen &&
+        results.length > 0 &&
+        position &&
+        createPortal(
+          <ul
+            id={listboxId}
+            role="listbox"
+            aria-label={label}
+            style={{
+              position: "fixed",
+              top: position.top + 4,
+              left: position.left,
+              width: position.width,
+            }}
+            className="z-50 max-h-48 overflow-y-auto rounded-md border border-border bg-popover py-1 shadow-md"
+          >
+            {results.map((skill, i) => (
+              <li key={skill.id} role="presentation">
+                {/* Not an independent tab stop — a combobox's options are
+                    selected via aria-activedescendant while focus stays on
+                    the input (ArrowDown/Up/Enter above), the same reason the
+                    hidden file input elsewhere on this page uses
+                    tabIndex={-1} rather than being reachable on its own. */}
+                <button
+                  id={optionId(skill.id)}
+                  type="button"
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={i === highlightedIndex}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(skill.id)}
+                  className={
+                    i === highlightedIndex
+                      ? "w-full px-3 py-1.5 text-left text-sm bg-accent text-accent-foreground"
+                      : "w-full px-3 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                  }
+                >
+                  {skill.name}
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body
+        )}
     </div>
   );
 }

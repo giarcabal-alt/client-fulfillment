@@ -20,6 +20,7 @@ import { CandidateDetailForm } from "./candidate-detail-form";
 import { DraftGenerator } from "./draft-generator";
 import { ResumeParse } from "./resume-parse";
 import { ResumeUpload } from "./resume-upload";
+import { ScorecardPanel, type Scorecard } from "./scorecard-panel";
 import { SkillReviewsPanel, type PendingSkillReview } from "./skill-reviews-panel";
 
 type RoleEmbed = {
@@ -56,6 +57,7 @@ export default async function CandidateDetailPage({
     { data: locationsData },
     { data: skillsData },
     { data: pendingReviewsData },
+    { data: scorecardsData },
   ] = await Promise.all([
     supabase
       .from("candidates")
@@ -104,6 +106,15 @@ export default async function CandidateDetailPage({
       .eq("candidate_id", id)
       .eq("status", "pending")
       .order("created_at", { ascending: true }),
+    // Prompt 5's scorecard list — newest first, append-only per the
+    // interview_scorecards RLS policy (select + insert only).
+    supabase
+      .from("interview_scorecards")
+      .select(
+        "id, rating, notes, stage_at_review, created_at, interviewer:profiles(id, display_name)"
+      )
+      .eq("candidate_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (error) {
@@ -177,6 +188,25 @@ export default async function CandidateDetailPage({
       suggestedSkillId: r.suggested_skill_id as string | null,
       suggestedSkillName: suggested?.name ?? null,
       similarity: r.similarity as number | null,
+    };
+  });
+
+  type InterviewerEmbed =
+    | { id: string; display_name: string | null }
+    | { id: string; display_name: string | null }[]
+    | null;
+  const scorecards: Scorecard[] = (scorecardsData ?? []).map((s) => {
+    const interviewerEmbed = s.interviewer as InterviewerEmbed;
+    const interviewer = Array.isArray(interviewerEmbed)
+      ? (interviewerEmbed[0] ?? null)
+      : interviewerEmbed;
+    return {
+      id: s.id as string,
+      rating: s.rating as number,
+      notes: s.notes as string | null,
+      stageAtReview: s.stage_at_review as string,
+      interviewerName: interviewer?.display_name ?? null,
+      createdAt: s.created_at as string,
     };
   });
 
@@ -302,6 +332,15 @@ export default async function CandidateDetailPage({
             </span>
             <SkillReviewsPanel reviews={pendingReviews} skills={skills} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Interview scorecards</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScorecardPanel candidateId={candidate.id} scorecards={scorecards} />
         </CardContent>
       </Card>
 
