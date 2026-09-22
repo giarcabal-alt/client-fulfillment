@@ -55,7 +55,7 @@ export function CompanyNameField({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       <label
         htmlFor="company-name"
         className="text-xs uppercase tracking-wide text-muted-foreground"
@@ -139,7 +139,7 @@ export function DisplayNameField({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       <label
         htmlFor="display-name"
         className="text-xs uppercase tracking-wide text-muted-foreground"

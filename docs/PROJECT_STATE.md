@@ -333,6 +333,12 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
   - **Verified live via Playwright MCP** at 1440×900 (search + all 4 filters fit in a single row with room to spare, 4-column card grid, all 4 seeded candidates visible with skill chips) and 375px (search/filters stack to a scannable column, card grid collapses to one column cleanly). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 3 changed files.
   - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4, Implementation Integrity 4/4.
 
+- **Density pass applied to the Settings page (`/settings`) — built and fully verified live, `/impeccable audit` scored 20/20.** Task-specific goal: fit on one screen at 1440×900.
+  - `page.tsx` rewritten from two stacked `Card`s ("Company", "Your profile") to a single `Section` with a `SectionDivider` between the two field groups, each keeping its own small `text-xs font-semibold` group heading; header trimmed to the density scale, page padding `p-4 sm:p-8`→`p-4 sm:p-6`, container narrowed `max-w-3xl`→`max-w-2xl` to match the shorter form content.
+  - `settings-form.tsx`: both fields' outer gap `gap-1.5`→`gap-1`; the save-on-blur logic, error/`aria-invalid`/`aria-describedby` wiring, and the "Saved" confirmation (both the visible growth-green text and the `sr-only` `aria-live="polite"` region) all preserved byte-for-byte.
+  - **Verified live via Playwright MCP** at 1440×900 (the whole page — header, both field groups, all helper text — fits with substantial vertical room to spare, no scrolling needed) and 375px (single column, divider and helper text wrap cleanly). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across both changed files.
+  - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4 (save-on-blur a11y wiring untouched), Performance 4/4, Theming 4/4, Responsive Design 4/4, Implementation Integrity 4/4.
+
 ## 5. IN PROGRESS
 
 Nothing in progress.

@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Section, SectionDivider } from "@/components/ui/section";
 import { createClient } from "@/lib/supabase/server";
 import { CompanyNameField, DisplayNameField } from "./settings-form";
 
@@ -33,10 +28,10 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
+    <div className="mx-auto flex max-w-2xl flex-col gap-3 p-4 sm:p-6">
       <div>
-        <h1 className="text-2xl">Settings</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="font-display text-xl text-ink-navy">Settings</h1>
+        <p className="text-sm text-muted-foreground">
           Company details and your own profile.
         </p>
       </div>
@@ -47,36 +42,30 @@ export default async function SettingsPage() {
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Company</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Section>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-ink-navy">Company</span>
           <CompanyNameField
-            companyName={
-              (settingsRow?.company_name as string | null) ?? null
-            }
+            companyName={(settingsRow?.company_name as string | null) ?? null}
           />
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Your profile</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <SectionDivider className="my-3" />
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-ink-navy">
+            Your profile
+          </span>
           {user?.email && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Signed in as {user.email}
             </p>
           )}
           <DisplayNameField
-            displayName={
-              (profileRow?.display_name as string | null) ?? null
-            }
+            displayName={(profileRow?.display_name as string | null) ?? null}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
     </div>
   );
 }
