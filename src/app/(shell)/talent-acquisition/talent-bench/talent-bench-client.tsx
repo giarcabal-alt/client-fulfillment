@@ -130,16 +130,16 @@ export function TalentBenchClient({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-hidden">
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           aria-label="Search candidates"
           placeholder="Search by name or skill…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="h-8 max-w-xs text-sm"
         />
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           <Select value={status} onValueChange={(v) => v && setStatus(v as StatusFilter)}>
             <SelectTrigger aria-label="Filter by candidate status" size="sm">
               <SelectValue>{(value: string) => statusLabelFor(value)}</SelectValue>
@@ -201,7 +201,7 @@ export function TalentBenchClient({
             placeholder="Min. years exp."
             value={minYears}
             onChange={(e) => setMinYears(e.target.value)}
-            className="w-36"
+            className="h-8 w-32 text-sm"
           />
         </div>
       </div>
@@ -217,7 +217,7 @@ export function TalentBenchClient({
             No candidates match these filters.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3 pb-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((candidate) => (
               <TalentBenchCard key={candidate.id} candidate={candidate} />
             ))}

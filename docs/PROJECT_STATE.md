@@ -326,6 +326,13 @@ Project-specific watch-item (not yet encountered here, but worth checking every 
   - **Verified live via Playwright MCP** at 1440×900 (list reads as a dense table, both existing roles visible with room to spare, Add-role dialog opens/closes correctly, job-description disclosure expands and shows the existing `Textarea`+timezone input) and 375px (rows wrap cleanly to two lines without clipping, disclosure and dialog both still work). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 4 changed/new files.
   - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4 (every control kept its `aria-label`, disclosure toggle uses the standard focus-visible ring), Performance 4/4, Theming 4/4, Responsive Design 4/4, Implementation Integrity 4/4.
 
+- **Density pass applied to the Talent Bench page (`/talent-acquisition/talent-bench`) — built and fully verified live, `/impeccable audit` scored 20/20.** Task-specific goal: a denser card grid, filters in one compact row.
+  - `talent-bench-card.tsx`: padding `p-4`→`p-2.5`, inner gap `gap-2`→`gap-1.5`, name/role text sized to the density scale (`text-sm font-medium` name, `text-xs` role line).
+  - `talent-bench-client.tsx`: grid gained a fourth breakpoint (`xl:grid-cols-4`, up from a 3-column max) and its gap tightened `gap-3`→`gap-2`; search input and every filter `Select`/the min-years `Input` now sit in one flex-wrapped row (`h-8`, smaller widths) instead of the search bar sitting on its own line above the filters.
+  - `page.tsx`: header trimmed to the density scale, page padding `p-4 sm:p-8`→`p-4 sm:p-6`.
+  - **Verified live via Playwright MCP** at 1440×900 (search + all 4 filters fit in a single row with room to spare, 4-column card grid, all 4 seeded candidates visible with skill chips) and 375px (search/filters stack to a scannable column, card grid collapses to one column cleanly). Confirmed `tsc`/`eslint`/`vitest` (28 tests) all pass. `/impeccable detect` — zero findings across all 3 changed files.
+  - **`/impeccable audit` scored 20/20 (Excellent)** — Accessibility 4/4, Performance 4/4, Theming 4/4, Responsive Design 4/4, Implementation Integrity 4/4.
+
 ## 5. IN PROGRESS
 
 Nothing in progress.

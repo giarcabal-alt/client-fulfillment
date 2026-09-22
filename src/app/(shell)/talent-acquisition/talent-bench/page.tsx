@@ -72,11 +72,11 @@ export default async function TalentBenchPage({
   }));
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4 sm:p-8">
+    <div className="flex h-full flex-col gap-3 p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl">Talent Bench</h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="font-display text-xl text-ink-navy">Talent Bench</h1>
+          <p className="text-sm text-muted-foreground">
             Every candidate on file, active and rejected — filter and search
             the whole bench.
           </p>
@@ -84,7 +84,7 @@ export default async function TalentBenchPage({
         <Button
           variant="outline"
           size="sm"
-          className="mt-1 shrink-0"
+          className="shrink-0"
           nativeButton={false}
           render={<Link href="/talent-acquisition/board">← Back to board</Link>}
         />

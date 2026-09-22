@@ -35,10 +35,10 @@ export function TalentBenchCard({ candidate }: { candidate: BenchCandidate }) {
           clip a ring painted flush on the child otherwise. */}
       <Link
         href={`/talent-acquisition/candidates/${candidate.id}`}
-        className="flex h-full flex-col gap-2 rounded-xl p-4 outline-none"
+        className="flex h-full flex-col gap-1.5 rounded-xl p-2.5 outline-none"
       >
         <div className="flex items-start justify-between gap-2">
-          <span className="min-w-0 truncate font-medium text-ink-navy">
+          <span className="min-w-0 truncate text-sm font-medium text-ink-navy">
             {candidate.name}
           </span>
           <StageChip
@@ -48,7 +48,7 @@ export function TalentBenchCard({ candidate }: { candidate: BenchCandidate }) {
           />
         </div>
 
-        <p className="truncate text-sm text-muted-foreground">
+        <p className="truncate text-xs text-muted-foreground">
           {roleLine ?? "No work history on file"}
         </p>
 
