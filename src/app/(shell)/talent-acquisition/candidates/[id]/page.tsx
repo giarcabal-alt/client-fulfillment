@@ -1,11 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PropertyRow } from "@/components/ui/property-row";
+import { Section } from "@/components/ui/section";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -14,15 +11,17 @@ import {
   type CandidateStage,
 } from "@/lib/talent-acquisition/cadence";
 import { scriptFor } from "@/lib/talent-acquisition/scripts";
+import { StageChip } from "@/lib/talent-acquisition/stage-chip";
 import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
-import { DraftGenerator } from "./draft-generator";
+import { OutreachPanel } from "./outreach-panel";
 import { RejectCandidatePanel } from "./reject-candidate-panel";
 import { ResumeParse } from "./resume-parse";
 import { ResumeUpload } from "./resume-upload";
 import { ScorecardPanel, type Scorecard } from "./scorecard-panel";
-import { SkillReviewsPanel, type PendingSkillReview } from "./skill-reviews-panel";
+import { SkillFitPanel } from "./skill-fit-panel";
+import { type PendingSkillReview } from "./skill-reviews-panel";
 
 type RoleEmbed = {
   id: string;
@@ -63,7 +62,10 @@ export default async function CandidateDetailPage({
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, resume_path, location_id, status, decline_reason, years_experience, last_role, last_company, employment_status, notice_period, expected_compensation, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
+        // `tags` deliberately not selected — the properties list dropped
+        // it (see the Skills & Fit tab's chips and PROJECT_STATE.md §4);
+        // the column itself stays in the schema, just unused by this page.
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, role_id, assigned_to, source_platform, communication_rating, resume_path, location_id, status, decline_reason, years_experience, last_role, last_company, employment_status, notice_period, expected_compensation, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -157,7 +159,6 @@ export default async function CandidateDetailPage({
     last_action_at: candidateRow.last_action_at as string | null,
     touch_index: candidateRow.touch_index as number,
     notes: candidateRow.notes as string | null,
-    tags: candidateRow.tags as string | null,
     role_id: candidateRow.role_id as string | null,
     source_platform: candidateRow.source_platform as string | null,
     communication_rating: candidateRow.communication_rating as number | null,
@@ -219,11 +220,11 @@ export default async function CandidateDetailPage({
     };
   });
 
-  // Prompt 4's "N of M required skills matched" indicator — needs the
-  // candidate's confirmed skills and the assigned role's required skills,
-  // neither of which is known until candidateRow (for role_id) has
-  // already loaded, so this runs sequentially after it, same pattern as
-  // the admin-only assignableProfiles fetch above.
+  // Skills & Fit tab: needs the candidate's confirmed skills and the
+  // assigned role's required skills, neither of which is known until
+  // candidateRow (for role_id) has already loaded, so this runs
+  // sequentially after it, same pattern as the admin-only
+  // assignableProfiles fetch above.
   const [{ data: candidateSkillsData }, { data: roleSkillsData }] = await Promise.all([
     supabase.from("candidate_skills").select("skill_id").eq("candidate_id", id),
     candidate.role_id
@@ -233,10 +234,23 @@ export default async function CandidateDetailPage({
   const confirmedSkillIds = new Set(
     (candidateSkillsData ?? []).map((r) => r.skill_id as string)
   );
-  const requiredSkillIds = (roleSkillsData ?? []).map((r) => r.skill_id as string);
-  const matchedRequiredCount = requiredSkillIds.filter((sid) =>
-    confirmedSkillIds.has(sid)
-  ).length;
+  const requiredSkillIds = new Set(
+    (roleSkillsData ?? []).map((r) => r.skill_id as string)
+  );
+  // Names, not just counts — the Skills & Fit tab shows the actual chips:
+  // Growth Green for a required skill the candidate has, neutral outline
+  // for a required skill they're missing, and a separate neutral group for
+  // confirmed skills that aren't tied to the assigned role at all.
+  const matchedRequiredNames: string[] = [];
+  const missingRequiredNames: string[] = [];
+  const otherConfirmedNames: string[] = [];
+  for (const s of skills) {
+    const isRequired = requiredSkillIds.has(s.id);
+    const isConfirmed = confirmedSkillIds.has(s.id);
+    if (isRequired && isConfirmed) matchedRequiredNames.push(s.name);
+    else if (isRequired && !isConfirmed) missingRequiredNames.push(s.name);
+    else if (isConfirmed) otherConfirmedNames.push(s.name);
+  }
 
   const action = nextActionFor(candidate);
   const status = statusFor(candidate, action);
@@ -276,7 +290,7 @@ export default async function CandidateDetailPage({
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-8">
+    <div className="mx-auto flex max-w-6xl flex-col gap-3 p-4 sm:p-6">
       <div>
         <Link
           href="/talent-acquisition/board"
@@ -284,16 +298,28 @@ export default async function CandidateDetailPage({
         >
           ← Back to board
         </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+
+        {/* Compact header: name/role/stage/status + small actions, not a
+            full card each for Resume and Reject (DESIGN_SYSTEM.md's
+            Density §5). */}
+        <div className="mt-1.5 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-2xl break-words">{candidate.name}</h1>
-            <p className="mt-1 text-muted-foreground">
+            <h1 className="font-display text-xl text-ink-navy break-words">
+              {candidate.name}
+            </h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {role?.title ?? "No role set"}
             </p>
           </div>
-          <StatusBadge status={status} action={action} className="w-fit shrink-0" />
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <StageChip stage={candidate.stage} status={candidate.status} />
+            <StatusBadge status={status} action={action} className="w-fit" />
+          </div>
         </div>
-        <div className="mt-3">
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <ResumeUpload candidateId={candidate.id} resumeUrl={resumeUrl} />
+          <ResumeParse candidateId={candidate.id} hasResume={Boolean(resumePath)} />
           <RejectCandidatePanel
             candidateId={candidate.id}
             status={candidate.status}
@@ -302,144 +328,87 @@ export default async function CandidateDetailPage({
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Candidate</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <CandidateDetailForm
-            candidate={candidate}
-            roles={roles}
-            locations={locations}
-          />
-          <AssignmentField
-            candidateId={candidate.id}
-            assignee={assignee}
-            isAdmin={isAdmin}
-            assignableProfiles={assignableProfiles}
-          />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-start">
+        {/* Left: persistent Properties section, visible across every tab. */}
+        <div className="flex flex-col gap-3">
+          <Section title="Properties">
+            <CandidateDetailForm
+              candidate={candidate}
+              roles={roles}
+              locations={locations}
+            />
+            <PropertyRow label="Assigned to">
+              <AssignmentField
+                candidateId={candidate.id}
+                assignee={assignee}
+                isAdmin={isAdmin}
+                assignableProfiles={assignableProfiles}
+              />
+            </PropertyRow>
+          </Section>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Resume</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <ResumeUpload candidateId={candidate.id} resumeUrl={resumeUrl} />
-          <ResumeParse candidateId={candidate.id} hasResume={Boolean(resumePath)} />
-        </CardContent>
-      </Card>
+        {/* Right: tabbed — only one section's content renders at a time. */}
+        <Section bodyClassName="px-3">
+          <Tabs defaultValue="skills">
+            <TabsList>
+              <TabsTrigger value="skills">Skills & Fit</TabsTrigger>
+              <TabsTrigger value="outreach">Outreach</TabsTrigger>
+              <TabsTrigger value="scorecards">Scorecards</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Skills</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {role && requiredSkillIds.length > 0 && (
-            <p className="text-sm text-slate-text">
-              {matchedRequiredCount} of {requiredSkillIds.length} required skills
-              matched for {role.title}
-            </p>
-          )}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Needs review
-            </span>
-            <SkillReviewsPanel reviews={pendingReviews} skills={skills} />
-          </div>
-        </CardContent>
-      </Card>
+            <TabsContent value="skills">
+              <SkillFitPanel
+                roleTitle={role?.title ?? null}
+                jobDescription={role?.job_description ?? null}
+                matchedRequired={matchedRequiredNames}
+                missingRequired={missingRequiredNames}
+                otherConfirmed={otherConfirmedNames}
+                pendingReviews={pendingReviews}
+                skills={skills}
+              />
+            </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Interview scorecards</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScorecardPanel candidateId={candidate.id} scorecards={scorecards} />
-        </CardContent>
-      </Card>
+            <TabsContent value="outreach">
+              <OutreachPanel
+                candidateId={candidate.id}
+                actionLabel={action.label}
+                script={script}
+                initialDraft={initialDraft}
+              />
+            </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Next action</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <p className="text-sm">{action.label}</p>
-          {script ? (
-            <pre className="whitespace-pre-wrap rounded-md border border-border bg-warm-paper p-3 font-sans text-sm text-slate-text">
-              {script}
-            </pre>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No scripted template at this stage.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            <TabsContent value="scorecards">
+              <ScorecardPanel candidateId={candidate.id} scorecards={scorecards} />
+            </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Suggested message</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DraftGenerator candidateId={candidate.id} initialDraft={initialDraft} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Job description</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {role ? (
-            <>
-              <p className="whitespace-pre-wrap text-sm">
-                {role.job_description || "No job description yet."}
-              </p>
-              <Link
-                href="/talent-acquisition/roles"
-                className="w-fit text-sm text-work-blue underline"
-              >
-                Edit on the roles page
-              </Link>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No role assigned — assign one above to see its job description.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No history yet.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {history.map((h) => (
-                <li
-                  key={h.id}
-                  className="flex items-baseline justify-between gap-4 text-sm"
-                >
-                  <span className="min-w-0 flex-1">{h.label}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {new Date(h.occurred_at).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+            <TabsContent value="history">
+              {history.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No history yet.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {history.map((h) => (
+                    <li
+                      key={h.id}
+                      className="flex items-baseline justify-between gap-4 text-sm"
+                    >
+                      <span className="min-w-0 flex-1">{h.label}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {new Date(h.occurred_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
+          </Tabs>
+        </Section>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ export default async function BoardPage() {
     { data, error },
     { data: rolesData, error: rolesError },
     { data: locationsData },
+    { data: skillLinksData },
   ] = await Promise.all([
     // ATS_FEATURES.md Step 6: rejected candidates no longer appear on the
     // main board — filtered here, not deleted (see the sidebar's
@@ -15,11 +16,15 @@ export default async function BoardPage() {
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, tags, role:roles(title)"
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, role:roles(title)"
       )
       .eq("status", "active"),
     supabase.from("roles").select("id, title").order("title"),
     supabase.from("locations").select("id, city, province").order("city"),
+    // Search now reads confirmed skill names instead of the retired tags
+    // column (see PROJECT_STATE.md §4) — every candidate_skills row is
+    // already confirmed, same reasoning as Talent Bench's own fetch.
+    supabase.from("candidate_skills").select("candidate_id, skill:skills(name)"),
   ]);
 
   if (error) {
@@ -36,6 +41,18 @@ export default async function BoardPage() {
     province: string;
   }[];
 
+  type SkillEmbed = { name: string } | { name: string }[] | null;
+  const skillsByCandidate = new Map<string, string[]>();
+  for (const row of skillLinksData ?? []) {
+    const embed = row.skill as SkillEmbed;
+    const skill = Array.isArray(embed) ? embed[0] ?? null : embed;
+    if (!skill) continue;
+    const candidateId = row.candidate_id as string;
+    const list = skillsByCandidate.get(candidateId) ?? [];
+    list.push(skill.name);
+    skillsByCandidate.set(candidateId, list);
+  }
+
   const candidates: BoardCandidate[] = (data ?? []).map((row) => {
     const role = row.role as { title: string } | { title: string }[] | null;
     const roleTitle = Array.isArray(role) ? role[0]?.title : role?.title;
@@ -46,7 +63,7 @@ export default async function BoardPage() {
       stage_entered_at: row.stage_entered_at as string,
       last_action_at: row.last_action_at as string | null,
       touch_index: row.touch_index as number,
-      tags: row.tags as string | null,
+      skills: skillsByCandidate.get(row.id as string) ?? [],
       roleTitle: roleTitle ?? null,
     };
   });

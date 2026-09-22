@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { PropertyValue, propertySelectTriggerClass } from "@/components/ui/property-row";
 import {
   Select,
   SelectContent,
@@ -34,14 +35,9 @@ export function AssignmentField({
   // requireAdminUser(); this UI gate is convenience, not the boundary).
   if (!isAdmin) {
     return (
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          Assigned to
-        </span>
-        <p className="text-sm">
-          {assignee ? assignee.displayName ?? "Unnamed teammate" : "Unassigned"}
-        </p>
-      </div>
+      <PropertyValue>
+        {assignee ? assignee.displayName ?? "Unnamed teammate" : "Unassigned"}
+      </PropertyValue>
     );
   }
 
@@ -69,12 +65,9 @@ export function AssignmentField({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">
-        Assigned to
-      </span>
+    <div className="flex flex-col gap-0.5">
       <Select value={assignedId} onValueChange={save} disabled={isPending}>
-        <SelectTrigger className="max-w-sm" aria-label="Assigned to">
+        <SelectTrigger aria-label="Assigned to" className={propertySelectTriggerClass}>
           <SelectValue>{(value: string) => labelFor(value)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -86,7 +79,7 @@ export function AssignmentField({
           ))}
         </SelectContent>
       </Select>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

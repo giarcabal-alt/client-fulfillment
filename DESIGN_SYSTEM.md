@@ -54,7 +54,17 @@ Tailwind v4 `@theme` block (CSS-first, no `tailwind.config.js`) — drop into `g
 - Motion: fade/rise on scroll only. No other animation flourishes.
 - Microcopy: plain verbs, first person plural ("we," "our"), use real numbers wherever numbers exist rather than vague language.
 
-## 5. Logo usage (for app chrome specifically)
+## 5. Density
+
+The app had drifted toward reading as visibly AI-generated: oversized type, generous padding, every field boxed in its own bordered input, and too many separate stacked cards for what's really one record. This section locks in a tighter, working-tool density. It doesn't touch colors, fonts, or the radius scale (§2/§3/§4 stay canon) — only type scale, spacing, and how fields/sections are grouped.
+
+- **Type scale:** Body/UI text 14px (Inter). Field labels 12px (the existing `text-xs uppercase tracking-wide text-muted-foreground` label convention already meets this — keep it). Page title ~20px, not the larger 24px+ display headline this app defaulted to for every page `h1`. Section headings 13–14px semibold — Bricolage Grotesque at label size, not the large display weight reserved for the page title itself.
+- **Padding:** Tighter than the app's original default throughout — cards/sections use a smaller internal gutter, form rows sit close together. A daily-use operations tool reads dense on purpose; it is not a marketing page.
+- **Fewer containers.** Default to **one card with internal 1px `stone` dividers** between logical groups of the same record, not a new bordered card per group. Reserve a separate card/container for content that's genuinely a different object (e.g. a tabbed panel's own surface), not for every subsection of one record.
+- **Properties-list pattern**, for a record's own fields (candidate/role attributes, settings, etc.): a small label on the left, the plain value on the right — not a grid of individually bordered inputs. The value reads as plain text at rest; editing affordances (a control's border, a select's chevron) appear only on hover or focus, never at rest. Keyboard focus must still show the Work Blue ring regardless of hover state — density never trades away the existing focus-visible contract.
+- **Shared primitives:** `PropertyRow`/`propertyControlClass`/`propertySelectTriggerClass` (`src/components/ui/property-row.tsx`) and `Section`/`SectionDivider` (`src/components/ui/section.tsx`) implement the properties-list and single-card-with-dividers patterns respectively — reuse them for any future record-detail or settings-style page rather than re-deriving the same spacing/hover rules per page.
+
+## 6. Logo usage (for app chrome specifically)
 
 - **Use the digital lowercase wordmark variant** in the app sidebar/header — the brand guide reserves this variant for "social handles and app contexts only," which this is. Never use it in anything printed or client-facing like proposals.
 - The **"us." monogram** (spells "us." — embedded operators, on your team) is the brand's strongest asset beyond the wordmark. Good candidates for it inside this app: a small mark on the sidebar collapsed state, an avatar placeholder for operator/candidate records, or a stamp-style mark on any exported report (e.g., a future monthly impact report feature). Navy tile is the primary variant; use blue or outline tile only if navy doesn't have contrast against its background.
@@ -63,14 +73,14 @@ Tailwind v4 `@theme` block (CSS-first, no `tailwind.config.js`) — drop into `g
 - Never place the full-color mark on a Work Blue background — only the approved blue monogram tile is allowed there.
 - No gradients on the mark, ever, in any context.
 
-## 6. What this replaces
+## 7. What this replaces
 
 The `recruiting-desk.html` prototype used a manila-folder/index-card aesthetic to explore the *interaction design* (kanban columns, drawer pattern, status badges, generate-draft flow). That visual skin does **not** carry forward — it predates this brand guide. When Claude Code builds the real UI, it should:
 
 - Keep: the column layout, the drawer/detail-panel pattern, the badge-as-status-indicator concept, the generate/copy button flow.
 - Replace: every color, the typewriter/serif paper styling, the folder-tab shapes, the stamp-rotation effects — none of that matches UpScaleSupport's system. Build from this doc's tokens instead.
 
-## 7. Implementation notes
+## 8. Implementation notes
 
 - **Framework:** Tailwind CSS v4 (CSS-first `@theme` config, no `tailwind.config.js`) + shadcn/ui — this resolves the open "CSS framework not yet chosen" item from `PROJECT_STATE.md`, and matches the pattern already working on the 3PL project.
 - Load Bricolage Grotesque and Inter as web fonts (Google Fonts or self-hosted — Claude Code's call during scaffold, either is fine).

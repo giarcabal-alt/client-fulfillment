@@ -10,6 +10,9 @@ import { parseResume } from "@/lib/talent-acquisition/resume-parse-actions";
 // call, and the schema's own review-queue design ("nothing auto-tags
 // silently") argues for the recruiter deciding when to run it, not it
 // firing invisibly the moment a file lands.
+//
+// Rendered as a small header action (DESIGN_SYSTEM.md's Density §5),
+// not its own card — logic and the parseResume() call are unchanged.
 export function ResumeParse({
   candidateId,
   hasResume,
@@ -46,7 +49,7 @@ export function ResumeParse({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <>
       <Button
         type="button"
         variant="outline"
@@ -54,17 +57,18 @@ export function ResumeParse({
         onClick={parse}
         disabled={isPending || !hasResume}
         aria-label="Parse resume"
-        className="w-fit"
       >
         {isPending ? "Parsing…" : "Parse resume"}
       </Button>
 
-      {summary && <p className="text-sm text-slate-text">{summary}</p>}
+      {summary && (
+        <p className="basis-full text-sm text-slate-text">{summary}</p>
+      )}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="basis-full text-sm text-destructive">
           {error}
         </p>
       )}
-    </div>
+    </>
   );
 }

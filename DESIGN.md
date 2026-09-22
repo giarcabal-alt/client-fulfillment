@@ -108,6 +108,20 @@ Seven tokens total, each with one confirmed job — the palette's discipline is 
 
 Max content width 1120px. Density favors scanability over airiness — this is a daily-use operations tool, not an editorial page. Responsive down to ~375px: the sidebar collapses to a top bar + slide-out sheet below the `md` breakpoint; content padding steps down from the desktop default to a smaller gutter so a phone-width viewport isn't eaten by desktop spacing.
 
+## Density
+
+The app had drifted toward reading as visibly AI-generated: oversized type, generous padding, every field boxed in its own bordered input, and too many separate stacked cards for what's really one record. Density is locked in tighter here — a working-tool feel, not an editorial one — without touching colors, fonts, or the radius scale above.
+
+- **Type scale:** Body/UI text 14px. Field labels 12px. Page title ~20px, not a large display headline. Section headings 13–14px semibold — Bricolage Grotesque at label size, not the large display weight reserved for the page title.
+- **Padding:** Tighter than an editorial default — cards/sections use a smaller internal gutter, form rows sit close together.
+- **Fewer containers.** Default to one card with internal 1px Stone dividers between logical groups of the same record, not a new bordered card per group. A separate card is reserved for content that's genuinely a different object, not every subsection of one record.
+- **Properties-list pattern**, for a record's own fields: a small label on the left, the plain value on the right — not a grid of individually bordered inputs. The value reads as plain text at rest; editing affordances (a control's border, a select's chevron) appear only on hover or focus. Keyboard focus always shows the Work Blue ring regardless of hover state.
+- **Shared primitives:** a `PropertyRow` component (properties-list rows) and a `Section` component (single-card-with-dividers) implement these patterns for reuse across any future record-detail or settings-style page.
+
+### Named Rules
+**The One-Card Rule.** A record's own fields default to one card with internal dividers, not one card per subsection — a second card is for a genuinely different object, not another group of the same record's fields.
+**The Hover-To-Edit Rule.** A properties-list value shows its editing affordance (border, chevron) only on hover or focus, never at rest — but the Work Blue focus-visible ring is never conditional on hover, only on actual keyboard/programmatic focus.
+
 ## Elevation & Depth
 
 Flat by default — cards, buttons, and inputs rest on borders, not shadows. Shadow is reserved strictly for floating/overlay elements that need to visually separate from the page beneath them (dropdown/select panels, slide-out sheets); it is never used on static, in-flow surfaces like cards. This matches the brand's flat, unglossy character — depth comes from borders and spacing, not light and shadow.

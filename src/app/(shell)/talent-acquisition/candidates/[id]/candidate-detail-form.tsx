@@ -3,6 +3,11 @@
 import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import {
+  PropertyRow,
+  propertyControlClass,
+  propertySelectTriggerClass,
+} from "@/components/ui/property-row";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -26,7 +31,6 @@ import {
   updateCandidateNotes,
   updateCandidateSourcePlatform,
   updateCandidateStage,
-  updateCandidateTags,
   updateCandidateYearsExperience,
 } from "@/lib/talent-acquisition/candidates-actions";
 import {
@@ -48,7 +52,6 @@ type Candidate = {
   id: string;
   stage: CandidateStage;
   notes: string | null;
-  tags: string | null;
   role_id: string | null;
   source_platform: string | null;
   communication_rating: number | null;
@@ -61,6 +64,12 @@ type Candidate = {
   expected_compensation: string | null;
 };
 
+// Every field here renders as a `PropertyRow` (DESIGN_SYSTEM.md's Density
+// §5 properties-list pattern) rather than its own bordered input in a
+// grid — a small label on the left, a plain-reading value/control on the
+// right, with the control's own border/chevron appearing only on hover or
+// focus. Notes is deliberately not one of these rows — it's its own small
+// auto-growing textarea below the list, per the same density rules.
 export function CandidateDetailForm({
   candidate,
   roles,
@@ -75,7 +84,6 @@ export function CandidateDetailForm({
     candidate.role_id ?? NO_ROLE_VALUE
   );
   const [notes, setNotes] = useState(candidate.notes ?? "");
-  const [tags, setTags] = useState(candidate.tags ?? "");
   const [sourcePlatform, setSourcePlatform] = useState(
     candidate.source_platform ?? NO_SOURCE_VALUE
   );
@@ -140,15 +148,6 @@ export function CandidateDetailForm({
     setError(null);
     startTransition(async () => {
       const result = await updateCandidateNotes(candidate.id, notes);
-      if (result.error) setError(result.error);
-    });
-  }
-
-  function saveTags() {
-    if (tags.trim() === (candidate.tags ?? "")) return;
-    setError(null);
-    startTransition(async () => {
-      const result = await updateCandidateTags(candidate.id, tags);
       if (result.error) setError(result.error);
     });
   }
@@ -319,260 +318,199 @@ export function CandidateDetailForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Stage
-          </span>
-          <Select
-            value={stage}
-            onValueChange={handleStageChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Stage">
-              <SelectValue>{(value: string) => stageLabelFor(value)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {BOARD_STAGES.map((s) => (
-                <SelectItem key={s.key} value={s.key}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Role
-          </span>
-          <Select
-            value={roleId}
-            onValueChange={handleRoleChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Role">
-              <SelectValue>{(value: string) => roleLabelFor(value)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_ROLE_VALUE}>
-                No role — Talent Pool
+    <div className="flex flex-col">
+      <PropertyRow label="Stage">
+        <Select value={stage} onValueChange={handleStageChange} disabled={isPending}>
+          <SelectTrigger aria-label="Stage" className={propertySelectTriggerClass}>
+            <SelectValue>{(value: string) => stageLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {BOARD_STAGES.map((s) => (
+              <SelectItem key={s.key} value={s.key}>
+                {s.label}
               </SelectItem>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id}>
-                  {role.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Source
-          </span>
-          <Select
-            value={sourcePlatform}
-            onValueChange={handleSourceChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Source">
-              <SelectValue>
-                {(value: string) => `Source: ${sourceLabelFor(value)}`}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_SOURCE_VALUE}>Not set</SelectItem>
-              {SOURCE_PLATFORMS.map((platform) => (
-                <SelectItem key={platform} value={platform}>
-                  {platform}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <PropertyRow label="Role">
+        <Select value={roleId} onValueChange={handleRoleChange} disabled={isPending}>
+          <SelectTrigger aria-label="Role" className={propertySelectTriggerClass}>
+            <SelectValue>{(value: string) => roleLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_ROLE_VALUE}>No role — Talent Pool</SelectItem>
+            {roles.map((role) => (
+              <SelectItem key={role.id} value={role.id}>
+                {role.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Communication
-          </span>
-          <Select
-            value={communicationRating}
-            onValueChange={handleRatingChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Communication rating">
-              <SelectValue>
-                {(value: string) => `Communication: ${ratingLabelFor(value)}`}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_RATING_VALUE}>Not rated</SelectItem>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}/5
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Location
-          </span>
-          <Select
-            value={locationId}
-            onValueChange={handleLocationChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Location">
-              <SelectValue>{(value: string) => locationLabelFor(value)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_LOCATION_VALUE}>Not set</SelectItem>
-              {locations.map((location) => (
-                <SelectItem key={location.id} value={location.id}>
-                  {location.city}, {location.province}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="candidate-last-role"
-            className="text-xs uppercase tracking-wide text-muted-foreground"
-          >
-            Last role
-          </label>
-          <Input
-            id="candidate-last-role"
-            value={lastRole}
-            onChange={(e) => setLastRole(e.target.value)}
-            onBlur={saveLastRole}
-            disabled={isPending}
-            placeholder="e.g. Senior Backend Engineer"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="candidate-last-company"
-            className="text-xs uppercase tracking-wide text-muted-foreground"
-          >
-            Last company
-          </label>
-          <Input
-            id="candidate-last-company"
-            value={lastCompany}
-            onChange={(e) => setLastCompany(e.target.value)}
-            onBlur={saveLastCompany}
-            disabled={isPending}
-            placeholder="e.g. Acme Corp"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="candidate-years-experience"
-            className="text-xs uppercase tracking-wide text-muted-foreground"
-          >
-            Years of experience
-          </label>
-          <Input
-            id="candidate-years-experience"
-            type="number"
-            min="0"
-            step="0.5"
-            value={yearsExperience}
-            onChange={(e) => setYearsExperience(e.target.value)}
-            onBlur={saveYearsExperience}
-            disabled={isPending}
-            placeholder="e.g. 5"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="candidate-expected-compensation"
-            className="text-xs uppercase tracking-wide text-muted-foreground"
-          >
-            Expected compensation
-          </label>
-          <Input
-            id="candidate-expected-compensation"
-            value={expectedCompensation}
-            onChange={(e) => setExpectedCompensation(e.target.value)}
-            onBlur={saveExpectedCompensation}
-            disabled={isPending}
-            placeholder="e.g. ₱80k/mo or $2,000/mo"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Employment status
-          </span>
-          <Select
-            value={employmentStatus}
-            onValueChange={handleEmploymentStatusChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Employment status">
-              <SelectValue>
-                {(value: string) => employmentStatusLabelFor(value)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_EMPLOYMENT_STATUS_VALUE}>Not set</SelectItem>
-              {EMPLOYMENT_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {EMPLOYMENT_STATUS_LABELS[status]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Notice period
-          </span>
-          <Select
-            value={noticePeriod}
-            onValueChange={handleNoticePeriodChange}
-            disabled={isPending}
-          >
-            <SelectTrigger aria-label="Notice period">
-              <SelectValue>{(value: string) => noticePeriodLabelFor(value)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_NOTICE_PERIOD_VALUE}>Not set</SelectItem>
-              {NOTICE_PERIODS.map((period) => (
-                <SelectItem key={period} value={period}>
-                  {NOTICE_PERIOD_LABELS[period]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="candidate-notes"
-          className="text-xs uppercase tracking-wide text-muted-foreground"
+      <PropertyRow label="Source">
+        <Select
+          value={sourcePlatform}
+          onValueChange={handleSourceChange}
+          disabled={isPending}
         >
+          <SelectTrigger aria-label="Source" className={propertySelectTriggerClass}>
+            <SelectValue>{(value: string) => sourceLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_SOURCE_VALUE}>Not set</SelectItem>
+            {SOURCE_PLATFORMS.map((platform) => (
+              <SelectItem key={platform} value={platform}>
+                {platform}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
+
+      <PropertyRow label="Communication">
+        <Select
+          value={communicationRating}
+          onValueChange={handleRatingChange}
+          disabled={isPending}
+        >
+          <SelectTrigger
+            aria-label="Communication rating"
+            className={propertySelectTriggerClass}
+          >
+            <SelectValue>{(value: string) => ratingLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_RATING_VALUE}>Not rated</SelectItem>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}/5
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
+
+      <PropertyRow label="Location">
+        <Select
+          value={locationId}
+          onValueChange={handleLocationChange}
+          disabled={isPending}
+        >
+          <SelectTrigger aria-label="Location" className={propertySelectTriggerClass}>
+            <SelectValue>{(value: string) => locationLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_LOCATION_VALUE}>Not set</SelectItem>
+            {locations.map((location) => (
+              <SelectItem key={location.id} value={location.id}>
+                {location.city}, {location.province}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
+
+      <PropertyRow label="Years of experience">
+        <Input
+          aria-label="Years of experience"
+          type="number"
+          min="0"
+          step="0.5"
+          value={yearsExperience}
+          onChange={(e) => setYearsExperience(e.target.value)}
+          onBlur={saveYearsExperience}
+          disabled={isPending}
+          placeholder="e.g. 5"
+          className={propertyControlClass}
+        />
+      </PropertyRow>
+
+      <PropertyRow label="Last role">
+        <Input
+          aria-label="Last role"
+          value={lastRole}
+          onChange={(e) => setLastRole(e.target.value)}
+          onBlur={saveLastRole}
+          disabled={isPending}
+          placeholder="e.g. Senior Backend Engineer"
+          className={propertyControlClass}
+        />
+      </PropertyRow>
+
+      <PropertyRow label="Last company">
+        <Input
+          aria-label="Last company"
+          value={lastCompany}
+          onChange={(e) => setLastCompany(e.target.value)}
+          onBlur={saveLastCompany}
+          disabled={isPending}
+          placeholder="e.g. Acme Corp"
+          className={propertyControlClass}
+        />
+      </PropertyRow>
+
+      <PropertyRow label="Employment status">
+        <Select
+          value={employmentStatus}
+          onValueChange={handleEmploymentStatusChange}
+          disabled={isPending}
+        >
+          <SelectTrigger
+            aria-label="Employment status"
+            className={propertySelectTriggerClass}
+          >
+            <SelectValue>{(value: string) => employmentStatusLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_EMPLOYMENT_STATUS_VALUE}>Not set</SelectItem>
+            {EMPLOYMENT_STATUSES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {EMPLOYMENT_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
+
+      <PropertyRow label="Notice period">
+        <Select
+          value={noticePeriod}
+          onValueChange={handleNoticePeriodChange}
+          disabled={isPending}
+        >
+          <SelectTrigger aria-label="Notice period" className={propertySelectTriggerClass}>
+            <SelectValue>{(value: string) => noticePeriodLabelFor(value)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_NOTICE_PERIOD_VALUE}>Not set</SelectItem>
+            {NOTICE_PERIODS.map((period) => (
+              <SelectItem key={period} value={period}>
+                {NOTICE_PERIOD_LABELS[period]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PropertyRow>
+
+      <PropertyRow label="Expected compensation">
+        <Input
+          aria-label="Expected compensation"
+          value={expectedCompensation}
+          onChange={(e) => setExpectedCompensation(e.target.value)}
+          onBlur={saveExpectedCompensation}
+          disabled={isPending}
+          placeholder="e.g. ₱80k/mo or $2,000/mo"
+          className={propertyControlClass}
+        />
+      </PropertyRow>
+
+      {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+
+      <div className="mt-3 flex flex-col gap-1">
+        <label htmlFor="candidate-notes" className="text-xs text-muted-foreground">
           Notes
         </label>
         <Textarea
@@ -581,28 +519,10 @@ export function CandidateDetailForm({
           onChange={(e) => setNotes(e.target.value)}
           onBlur={saveNotes}
           disabled={isPending}
-          rows={3}
+          rows={2}
+          className="min-h-8 text-sm"
         />
       </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="candidate-tags"
-          className="text-xs uppercase tracking-wide text-muted-foreground"
-        >
-          Tags
-        </label>
-        <Input
-          id="candidate-tags"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          onBlur={saveTags}
-          disabled={isPending}
-          placeholder="Comma-separated, e.g. backend, remote"
-        />
-      </div>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

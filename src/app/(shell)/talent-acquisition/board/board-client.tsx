@@ -65,7 +65,7 @@ export type BoardCandidate = {
   stage_entered_at: string;
   last_action_at: string | null;
   touch_index: number;
-  tags: string | null;
+  skills: string[];
   roleTitle: string | null;
 };
 
@@ -88,7 +88,7 @@ export function BoardClient({
     const query = search.trim().toLowerCase();
     if (!query) return candidates;
     return candidates.filter((c) =>
-      [c.name, c.roleTitle ?? "", c.tags ?? ""]
+      [c.name, c.roleTitle ?? "", ...c.skills]
         .join(" ")
         .toLowerCase()
         .includes(query)
@@ -121,7 +121,7 @@ export function BoardClient({
       <div className="flex items-center justify-between gap-4">
         <Input
           aria-label="Search candidates"
-          placeholder="Search by name, role, or tag…"
+          placeholder="Search by name, role, or skill…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"

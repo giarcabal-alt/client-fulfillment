@@ -10,10 +10,10 @@
 // submit time, against whatever the user finished editing in the form).
 //
 // Deliberately NOT a "use server" file — it's imported by two different
-// "use server" action files and also exports plain synchronous helpers
-// (finalizeSkillChips, mergeTagsWithSkillNames) that a "use server" file
-// can't export at all (see PROJECT_STATE.md §10: such a file silently
-// drops any non-async-function export from the client bundle).
+// "use server" action files and also exports a plain synchronous helper
+// (finalizeSkillChips) that a "use server" file can't export at all (see
+// PROJECT_STATE.md §10: such a file silently drops any non-async-function
+// export from the client bundle).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { config } from "@/lib/config";
@@ -412,25 +412,4 @@ export function finalizeSkillChips(chips: SubmittedSkillChip[]): {
     }
   }
   return { persist, confirmedNames };
-}
-
-// Merges confirmed skill names into the existing tags column
-// (case-insensitive dedupe against whatever the user already typed),
-// rather than overwriting it — the Tags field is untouched when no resume
-// was uploaded (empty skillNames), matching this task's "manual entry
-// must keep working exactly as it does today" requirement.
-export function mergeTagsWithSkillNames(
-  existingTags: string | null,
-  skillNames: string[]
-): string | null {
-  const merged = (existingTags ?? "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  for (const name of skillNames) {
-    if (!merged.some((t) => t.toLowerCase() === name.toLowerCase())) {
-      merged.push(name);
-    }
-  }
-  return merged.length > 0 ? merged.join(", ") : null;
 }

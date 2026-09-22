@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   finalizeSkillChips,
-  mergeTagsWithSkillNames,
   type SubmittedSkillChip,
 } from "./resume-parse-core";
 
@@ -95,26 +94,5 @@ describe("finalizeSkillChips", () => {
     ]);
 
     expect(persist[0].kind).toBe("auto");
-  });
-});
-
-describe("mergeTagsWithSkillNames", () => {
-  it("returns null when both existing tags and skill names are empty", () => {
-    expect(mergeTagsWithSkillNames(null, [])).toBeNull();
-    expect(mergeTagsWithSkillNames("", [])).toBeNull();
-  });
-
-  it("leaves existing tags untouched when there are no confirmed skill names", () => {
-    expect(mergeTagsWithSkillNames("backend, remote", [])).toBe("backend, remote");
-  });
-
-  it("builds a tags string from skill names alone when there were no existing tags", () => {
-    expect(mergeTagsWithSkillNames(null, ["TypeScript", "Docker"])).toBe("TypeScript, Docker");
-  });
-
-  it("appends skill names to existing tags, deduping case-insensitively", () => {
-    expect(mergeTagsWithSkillNames("backend, TypeScript", ["TypeScript", "Docker"])).toBe(
-      "backend, TypeScript, Docker"
-    );
   });
 });

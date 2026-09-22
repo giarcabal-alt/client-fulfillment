@@ -340,15 +340,6 @@ export function NewCandidateForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="new-candidate-tags">Tags (optional)</Label>
-        <Input
-          id="new-candidate-tags"
-          name="tags"
-          placeholder="Comma-separated, e.g. backend, remote"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
         <Label htmlFor="new-candidate-source">Source (optional)</Label>
         <Select
           value={sourcePlatform}

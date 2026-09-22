@@ -31,7 +31,6 @@ export type BenchCandidate = {
   noticePeriod: string | null;
   sourcePlatform: string | null;
   communicationRating: number | null;
-  tags: string | null;
   skills: string[];
 };
 
@@ -77,7 +76,7 @@ export function TalentBenchClient({
     return candidates.filter((c) => {
       if (status !== ANY_VALUE && c.status !== status) return false;
       if (query) {
-        const haystack = [c.name, c.tags ?? "", ...c.skills].join(" ").toLowerCase();
+        const haystack = [c.name, ...c.skills].join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       if (employmentStatus !== ANY_VALUE && c.employmentStatus !== employmentStatus) {
@@ -135,7 +134,7 @@ export function TalentBenchClient({
       <div className="flex flex-col gap-3">
         <Input
           aria-label="Search candidates"
-          placeholder="Search by name, tag, or skill…"
+          placeholder="Search by name or skill…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"

@@ -30,7 +30,7 @@ export default async function TalentBenchPage({
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, status, last_role, last_company, years_experience, employment_status, notice_period, source_platform, communication_rating, tags"
+        "id, name, stage, status, last_role, last_company, years_experience, employment_status, notice_period, source_platform, communication_rating"
       )
       .order("name"),
     // candidate_skills has no status filter of its own — every row here
@@ -68,7 +68,6 @@ export default async function TalentBenchPage({
     noticePeriod: row.notice_period as string | null,
     sourcePlatform: row.source_platform as string | null,
     communicationRating: row.communication_rating as number | null,
-    tags: row.tags as string | null,
     skills: skillsByCandidate.get(row.id as string) ?? [],
   }));
 

@@ -5,7 +5,6 @@ import { requireAdminUser } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
 import {
   finalizeSkillChips,
-  mergeTagsWithSkillNames,
   persistCandidateSkills,
   type SubmittedSkillChip,
 } from "@/lib/talent-acquisition/resume-parse-core";
@@ -132,7 +131,6 @@ export async function createCandidate(
 ): Promise<CandidateActionState> {
   const name = formData.get("name");
   const notes = formData.get("notes");
-  const tags = formData.get("tags");
   const roleMode = formData.get("role_mode");
   const roleId = formData.get("role_id");
   const newRoleTitle = formData.get("new_role_title");
@@ -237,11 +235,13 @@ export async function createCandidate(
       }
     }
 
-    const { persist: skillsToPersist, confirmedNames } = finalizeSkillChips(skillChips);
-    const finalTags = mergeTagsWithSkillNames(
-      typeof tags === "string" && tags.trim() ? tags.trim() : null,
-      confirmedNames
-    );
+    // Skills go straight to candidate_skills (below), never mirrored into
+    // the tags column — tags dropped out of the candidate UI entirely in
+    // favor of confirmed skills as the structured source (see
+    // PROJECT_STATE.md §4); `finalizeSkillChips` still returns
+    // `confirmedNames` for that persistence step, just no longer for a
+    // tags string.
+    const { persist: skillsToPersist } = finalizeSkillChips(skillChips);
 
     const { data: newCandidate, error } = await supabase
       .from("candidates")
@@ -250,7 +250,6 @@ export async function createCandidate(
         role_id: finalRoleId,
         stage,
         notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-        tags: finalTags,
         source_platform:
           typeof sourcePlatform === "string" && sourcePlatform
             ? sourcePlatform
@@ -362,26 +361,6 @@ export async function updateCandidateNotes(
   return { error: null };
 }
 
-export async function updateCandidateTags(
-  id: string,
-  tags: string
-): Promise<CandidateActionState> {
-  try {
-    const supabase = await requireUser();
-    const { error } = await supabase
-      .from("candidates")
-      .update({ tags: tags.trim() || null })
-      .eq("id", id);
-    if (error) throw error;
-  } catch (error) {
-    console.error("Failed to update candidate tags:", error);
-    return { error: "Couldn't save the tags. Please try again." };
-  }
-
-  revalidatePath(BOARD_PATH);
-  revalidatePath(candidatePath(id));
-  return { error: null };
-}
 
 export async function reassignCandidateRole(
   id: string,
