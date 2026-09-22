@@ -118,3 +118,24 @@
     display: none;
   }
 }
+
+/*
+ * Placeholder text must be visibly distinct from real typed content, or an
+ * empty field showing a hint is indistinguishable from a field with real
+ * text already in it. `Input`/`Textarea` both set `placeholder:text-
+ * muted-foreground`, but `--muted-foreground` resolves to the exact same
+ * value as `--foreground` (both `--color-slate-text`) — so placeholder and
+ * real text render in identical color today. Fixed once, globally, here
+ * rather than per-field: slate-text at a clearly reduced opacity, applied
+ * to every placeholder in the app regardless of which component renders
+ * it. Deliberately left unlayered (outside `@layer`) so it wins over the
+ * `placeholder:text-muted-foreground` utility class without needing to
+ * touch `Input`/`Textarea` or every call site's className — per the CSS
+ * Cascade Layers spec, an unlayered normal-priority rule always beats a
+ * layered one (Tailwind's utilities included), regardless of selector
+ * specificity or source order.
+ */
+::placeholder {
+  color: var(--color-slate-text);
+  opacity: 0.45;
+}

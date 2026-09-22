@@ -31,6 +31,7 @@ export type RoleMode = "none" | "existing" | "new";
 
 const BOARD_PATH = "/talent-acquisition/board";
 const ROLES_PATH = "/talent-acquisition/roles";
+const REJECTED_PATH = "/talent-acquisition/rejected";
 const candidatePath = (id: string) => `/talent-acquisition/candidates/${id}`;
 
 // Every action re-derives the user server-side via getUser() (never
@@ -536,6 +537,42 @@ export async function updateCandidateLocation(
   }
 
   revalidatePath(BOARD_PATH);
+  revalidatePath(candidatePath(id));
+  return { error: null };
+}
+
+// ATS_FEATURES.md Step 6: decline/reject flow. `status` is orthogonal to
+// the pipeline `stage` (ATS_FEATURES.md's own "candidate status vs. stage"
+// architecture decision, see PROJECT_STATE.md §10/§4 — Step 1's schema
+// migration) — rejecting a candidate never touches `stage`, so it stays
+// exactly where the candidate was ("last stage before rejection") for the
+// rejected-candidates view to show. A non-empty decline reason is
+// required and validated here, server-side, not just in the client form —
+// SECURITY.md's boundary-validation rule: a client-side-only check can
+// always be bypassed by calling the Server Action directly.
+export async function rejectCandidate(
+  id: string,
+  declineReason: string
+): Promise<CandidateActionState> {
+  const reason = declineReason.trim();
+  if (!reason) {
+    return { error: "A decline reason is required." };
+  }
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("candidates")
+      .update({ status: "rejected", decline_reason: reason })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to reject candidate:", error);
+    return { error: "Couldn't reject this candidate. Please try again." };
+  }
+
+  revalidatePath(BOARD_PATH);
+  revalidatePath(REJECTED_PATH);
   revalidatePath(candidatePath(id));
   return { error: null };
 }

@@ -9,11 +9,15 @@ export default async function BoardPage() {
     { data: rolesData, error: rolesError },
     { data: locationsData },
   ] = await Promise.all([
+    // ATS_FEATURES.md Step 6: rejected candidates no longer appear on the
+    // main board — filtered here, not deleted (see rejected/page.tsx for
+    // the separate archive view).
     supabase
       .from("candidates")
       .select(
         "id, name, stage, stage_entered_at, last_action_at, touch_index, tags, role:roles(title)"
-      ),
+      )
+      .eq("status", "active"),
     supabase.from("roles").select("id, title").order("title"),
     supabase.from("locations").select("id, city, province").order("city"),
   ]);
@@ -56,12 +60,20 @@ export default async function BoardPage() {
             The candidate pipeline, Talent Pool included.
           </p>
         </div>
-        <Link
-          href="/talent-acquisition/roles"
-          className="mt-1 shrink-0 text-sm text-work-blue underline"
-        >
-          Manage roles
-        </Link>
+        <div className="mt-1 flex shrink-0 items-center gap-4">
+          <Link
+            href="/talent-acquisition/rejected"
+            className="text-sm text-work-blue underline"
+          >
+            View rejected
+          </Link>
+          <Link
+            href="/talent-acquisition/roles"
+            className="text-sm text-work-blue underline"
+          >
+            Manage roles
+          </Link>
+        </div>
       </div>
 
       {error && (

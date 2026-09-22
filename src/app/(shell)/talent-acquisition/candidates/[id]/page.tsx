@@ -18,6 +18,7 @@ import { StatusBadge } from "@/lib/talent-acquisition/status-badge";
 import { AssignmentField } from "./assignment-field";
 import { CandidateDetailForm } from "./candidate-detail-form";
 import { DraftGenerator } from "./draft-generator";
+import { RejectCandidatePanel } from "./reject-candidate-panel";
 import { ResumeParse } from "./resume-parse";
 import { ResumeUpload } from "./resume-upload";
 import { ScorecardPanel, type Scorecard } from "./scorecard-panel";
@@ -62,7 +63,7 @@ export default async function CandidateDetailPage({
     supabase
       .from("candidates")
       .select(
-        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, resume_path, location_id, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
+        "id, name, stage, stage_entered_at, last_action_at, touch_index, notes, tags, role_id, assigned_to, source_platform, communication_rating, resume_path, location_id, status, decline_reason, role:roles(id, title, job_description), assignee:profiles!assigned_to(id, display_name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -161,6 +162,8 @@ export default async function CandidateDetailPage({
     source_platform: candidateRow.source_platform as string | null,
     communication_rating: candidateRow.communication_rating as number | null,
     location_id: candidateRow.location_id as string | null,
+    status: candidateRow.status as "active" | "rejected",
+    decline_reason: candidateRow.decline_reason as string | null,
   };
 
   const roles = (rolesData ?? []) as { id: string; title: string }[];
@@ -283,6 +286,13 @@ export default async function CandidateDetailPage({
             </p>
           </div>
           <StatusBadge status={status} action={action} className="w-fit shrink-0" />
+        </div>
+        <div className="mt-3">
+          <RejectCandidatePanel
+            candidateId={candidate.id}
+            status={candidate.status}
+            declineReason={candidate.decline_reason}
+          />
         </div>
       </div>
 
