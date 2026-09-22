@@ -20,6 +20,7 @@ import { CandidateDetailForm } from "./candidate-detail-form";
 import { DraftGenerator } from "./draft-generator";
 import { ResumeParse } from "./resume-parse";
 import { ResumeUpload } from "./resume-upload";
+import { SkillReviewsPanel, type PendingSkillReview } from "./skill-reviews-panel";
 
 type RoleEmbed = {
   id: string;
@@ -53,6 +54,8 @@ export default async function CandidateDetailPage({
     userRole,
     { data: draftRow },
     { data: locationsData },
+    { data: skillsData },
+    { data: pendingReviewsData },
   ] = await Promise.all([
     supabase
       .from("candidates")
@@ -92,6 +95,15 @@ export default async function CandidateDetailPage({
       .limit(1)
       .maybeSingle(),
     supabase.from("locations").select("id, city, province").order("city"),
+    supabase.from("skills").select("id, name").order("name"),
+    // Prompt 4's "Needs Review" panel — only pending rows; confirmed/
+    // rejected ones drop out once handled (see skill-review-actions.ts).
+    supabase
+      .from("candidate_skill_reviews")
+      .select("id, raw_text, suggested_skill_id, similarity, suggested:skills(id, name)")
+      .eq("candidate_id", id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }),
   ]);
 
   if (error) {
@@ -151,6 +163,41 @@ export default async function CandidateDetailPage({
     label: string;
     occurred_at: string;
   }[];
+  const skills = (skillsData ?? []) as { id: string; name: string }[];
+
+  type SkillEmbed = { id: string; name: string } | { id: string; name: string }[] | null;
+  const pendingReviews: PendingSkillReview[] = (pendingReviewsData ?? []).map((r) => {
+    const suggestedEmbed = r.suggested as SkillEmbed;
+    const suggested = Array.isArray(suggestedEmbed)
+      ? (suggestedEmbed[0] ?? null)
+      : suggestedEmbed;
+    return {
+      id: r.id as string,
+      rawText: r.raw_text as string,
+      suggestedSkillId: r.suggested_skill_id as string | null,
+      suggestedSkillName: suggested?.name ?? null,
+      similarity: r.similarity as number | null,
+    };
+  });
+
+  // Prompt 4's "N of M required skills matched" indicator — needs the
+  // candidate's confirmed skills and the assigned role's required skills,
+  // neither of which is known until candidateRow (for role_id) has
+  // already loaded, so this runs sequentially after it, same pattern as
+  // the admin-only assignableProfiles fetch above.
+  const [{ data: candidateSkillsData }, { data: roleSkillsData }] = await Promise.all([
+    supabase.from("candidate_skills").select("skill_id").eq("candidate_id", id),
+    candidate.role_id
+      ? supabase.from("role_skills").select("skill_id").eq("role_id", candidate.role_id)
+      : Promise.resolve({ data: [] as { skill_id: string }[] }),
+  ]);
+  const confirmedSkillIds = new Set(
+    (candidateSkillsData ?? []).map((r) => r.skill_id as string)
+  );
+  const requiredSkillIds = (roleSkillsData ?? []).map((r) => r.skill_id as string);
+  const matchedRequiredCount = requiredSkillIds.filter((sid) =>
+    confirmedSkillIds.has(sid)
+  ).length;
 
   const action = nextActionFor(candidate);
   const status = statusFor(candidate, action);
@@ -235,6 +282,26 @@ export default async function CandidateDetailPage({
         <CardContent className="flex flex-col gap-4">
           <ResumeUpload candidateId={candidate.id} resumeUrl={resumeUrl} />
           <ResumeParse candidateId={candidate.id} hasResume={Boolean(resumePath)} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Skills</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {role && requiredSkillIds.length > 0 && (
+            <p className="text-sm text-slate-text">
+              {matchedRequiredCount} of {requiredSkillIds.length} required skills
+              matched for {role.title}
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Needs review
+            </span>
+            <SkillReviewsPanel reviews={pendingReviews} skills={skills} />
+          </div>
         </CardContent>
       </Card>
 
