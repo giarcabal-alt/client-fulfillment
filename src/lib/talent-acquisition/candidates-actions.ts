@@ -37,7 +37,11 @@ export type RoleMode = "none" | "existing" | "new";
 
 const BOARD_PATH = "/talent-acquisition/board";
 const ROLES_PATH = "/talent-acquisition/roles";
-const REJECTED_PATH = "/talent-acquisition/rejected";
+// The standalone rejected-candidates archive page was consolidated into
+// Talent Bench (pre-filtered to status='rejected') rather than kept as a
+// second place showing the same information — revalidate that route
+// instead of a now-deleted one.
+const TALENT_BENCH_PATH = "/talent-acquisition/talent-bench";
 const candidatePath = (id: string) => `/talent-acquisition/candidates/${id}`;
 
 // Every action re-derives the user server-side via getUser() (never
@@ -578,7 +582,7 @@ export async function rejectCandidate(
   }
 
   revalidatePath(BOARD_PATH);
-  revalidatePath(REJECTED_PATH);
+  revalidatePath(TALENT_BENCH_PATH);
   revalidatePath(candidatePath(id));
   return { error: null };
 }
@@ -589,7 +593,6 @@ export async function rejectCandidate(
 // on-change fields on the candidate detail page, same one-action-per-field
 // shape as notes/tags/source_platform above. All optional; none of these
 // block candidate creation or any other existing flow.
-const TALENT_BENCH_PATH = "/talent-acquisition/talent-bench";
 
 export async function updateCandidateYearsExperience(
   id: string,

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { BoardClient, type BoardCandidate } from "./board-client";
 
@@ -10,8 +9,9 @@ export default async function BoardPage() {
     { data: locationsData },
   ] = await Promise.all([
     // ATS_FEATURES.md Step 6: rejected candidates no longer appear on the
-    // main board — filtered here, not deleted (see rejected/page.tsx for
-    // the separate archive view).
+    // main board — filtered here, not deleted (see the sidebar's
+    // "Rejected" link, which reuses Talent Bench pre-filtered to
+    // status='rejected' rather than a separate archive page).
     supabase
       .from("candidates")
       .select(
@@ -53,33 +53,11 @@ export default async function BoardPage() {
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl">Talent Acquisition Desk</h1>
-          <p className="mt-1 text-muted-foreground">
-            The candidate pipeline, Talent Pool included.
-          </p>
-        </div>
-        <div className="mt-1 flex shrink-0 flex-wrap items-center gap-4">
-          <Link
-            href="/talent-acquisition/talent-bench"
-            className="text-sm text-work-blue underline"
-          >
-            Talent Bench
-          </Link>
-          <Link
-            href="/talent-acquisition/rejected"
-            className="text-sm text-work-blue underline"
-          >
-            View rejected
-          </Link>
-          <Link
-            href="/talent-acquisition/roles"
-            className="text-sm text-work-blue underline"
-          >
-            Manage roles
-          </Link>
-        </div>
+      <div className="min-w-0">
+        <h1 className="text-2xl">Talent Acquisition Desk</h1>
+        <p className="mt-1 text-muted-foreground">
+          The candidate pipeline, Talent Pool included.
+        </p>
       </div>
 
       {error && (

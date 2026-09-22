@@ -9,7 +9,22 @@ import { TalentBenchClient, type BenchCandidate } from "./talent-bench-client";
 // whole bench including rejected candidates who may still be worth
 // re-approaching for a different role later. Card grid, not a kanban
 // board — there's no single "column" a candidate belongs in here.
-export default async function TalentBenchPage() {
+//
+// The sidebar's "Rejected" item links here with `?status=rejected`
+// rather than to a second standalone archive page — the earlier reject-
+// flow prompt built one, but it showed exactly the same information this
+// view already can (with the status filter below), so it was deleted in
+// favor of this single place. `status` read server-side and passed down
+// as the client filter's initial value, not the only way to set it — the
+// filter itself still lives in the client component so it stays
+// changeable after landing here.
+export default async function TalentBenchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status } = await searchParams;
+  const initialStatus = status === "rejected" ? "rejected" : "any";
   const supabase = await createClient();
   const [{ data, error }, { data: skillLinksData }] = await Promise.all([
     supabase
@@ -82,7 +97,7 @@ export default async function TalentBenchPage() {
         </p>
       )}
 
-      <TalentBenchClient candidates={candidates} />
+      <TalentBenchClient candidates={candidates} initialStatus={initialStatus} />
     </div>
   );
 }

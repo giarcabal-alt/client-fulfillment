@@ -37,22 +37,45 @@ export type BenchCandidate = {
 
 const ANY_VALUE = "any";
 
+type StatusFilter = "any" | "active" | "rejected";
+
 export function TalentBenchClient({
   candidates,
+  initialStatus = "any",
 }: {
   candidates: BenchCandidate[];
+  initialStatus?: StatusFilter;
 }) {
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
   const [employmentStatus, setEmploymentStatus] = useState(ANY_VALUE);
   const [noticePeriod, setNoticePeriod] = useState(ANY_VALUE);
   const [sourcePlatform, setSourcePlatform] = useState(ANY_VALUE);
   const [minYears, setMinYears] = useState("");
+
+  // The sidebar's "Talent Bench" and "Rejected" links point at the same
+  // route with only `?status=` differing, so clicking between them is a
+  // same-page navigation — React reuses this component instance rather
+  // than remounting it, meaning `useState(initialStatus)`'s initial value
+  // only ever applies once, on first mount. Re-deriving `status` from
+  // `initialStatus` during render (React's documented pattern for
+  // resetting state when a prop-like value changes) is what makes
+  // "Rejected" actually apply the filter on every click, not just the
+  // first time this component ever mounts — same reasoning, same
+  // during-render-not-in-an-effect shape, as mobile-nav.tsx's
+  // pathname-change Sheet-close reset (see PROJECT_STATE.md §10).
+  const [lastInitialStatus, setLastInitialStatus] = useState(initialStatus);
+  if (initialStatus !== lastInitialStatus) {
+    setLastInitialStatus(initialStatus);
+    setStatus(initialStatus);
+  }
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     const minYearsNum = minYears.trim() === "" ? null : Number(minYears);
 
     return candidates.filter((c) => {
+      if (status !== ANY_VALUE && c.status !== status) return false;
       if (query) {
         const haystack = [c.name, c.tags ?? "", ...c.skills].join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
@@ -75,7 +98,20 @@ export function TalentBenchClient({
       }
       return true;
     });
-  }, [candidates, search, employmentStatus, noticePeriod, sourcePlatform, minYears]);
+  }, [
+    candidates,
+    search,
+    status,
+    employmentStatus,
+    noticePeriod,
+    sourcePlatform,
+    minYears,
+  ]);
+
+  function statusLabelFor(value: string) {
+    if (value === ANY_VALUE) return "Active + rejected";
+    return value === "rejected" ? "Rejected only" : "Active only";
+  }
 
   function employmentStatusLabelFor(value: string) {
     if (value === ANY_VALUE) return "Any employment status";
@@ -105,6 +141,17 @@ export function TalentBenchClient({
           className="max-w-sm"
         />
         <div className="flex flex-wrap gap-3">
+          <Select value={status} onValueChange={(v) => v && setStatus(v as StatusFilter)}>
+            <SelectTrigger aria-label="Filter by candidate status" size="sm">
+              <SelectValue>{(value: string) => statusLabelFor(value)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ANY_VALUE}>Active + rejected</SelectItem>
+              <SelectItem value="active">Active only</SelectItem>
+              <SelectItem value="rejected">Rejected only</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={employmentStatus} onValueChange={(v) => v && setEmploymentStatus(v)}>
             <SelectTrigger aria-label="Filter by employment status" size="sm">
               <SelectValue>{(value: string) => employmentStatusLabelFor(value)}</SelectValue>

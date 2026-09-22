@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 // Modules (what you actually do here) stay grouped together, in the order
@@ -9,11 +9,23 @@ import { cn } from "@/lib/utils";
 // they're disabled placeholders, since they're still "modules," not
 // settings. Settings/Admin are app-level, not a module, so they're a
 // visually separate second group below a divider (see the render below).
-const moduleItems = [
+//
+// Talent Acquisition Desk is a parent *label*, not a link — Board (below)
+// is its own sub-item pointing at the exact same destination the parent
+// used to link to, so keeping the parent clickable too would just be a
+// second way to do the same thing. The four sub-items stay permanently
+// visible under it rather than behind a collapsible toggle: there are
+// only four, this is the only module that has any today, and a toggle
+// would add a click to reach navigation that's currently one click away.
+const talentAcquisitionSubItems = [
+  { label: "Board", href: "/talent-acquisition/board" },
+  { label: "Job Openings", href: "/talent-acquisition/roles" },
+  { label: "Talent Bench", href: "/talent-acquisition/talent-bench" },
+  // Reuses Talent Bench pre-filtered to status='rejected' rather than a
+  // second standalone archive page — see talent-bench/page.tsx.
   {
-    label: "Talent Acquisition Desk",
-    href: "/talent-acquisition/board",
-    match: "/talent-acquisition",
+    label: "Rejected",
+    href: "/talent-acquisition/talent-bench?status=rejected",
   },
 ];
 
@@ -21,6 +33,7 @@ const comingSoonItems = ["Onboarding", "Kickoff"];
 
 export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const secondaryItems = isAdmin
     ? [
         { label: "Settings", href: "/settings", match: "/settings" },
@@ -46,9 +59,44 @@ export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
     );
   }
 
+  // Talent Bench and Rejected share the same pathname
+  // (/talent-acquisition/talent-bench) and differ only by the
+  // `status` query param, so a plain pathname match can't tell them
+  // apart the way it can for Board/Job Openings — this checks the query
+  // string too, matching each sub-item to exactly the URL it links to.
+  const isOnTalentBench = pathname === "/talent-acquisition/talent-bench";
+  const isRejectedFilter = searchParams.get("status") === "rejected";
+
+  function talentAcquisitionSubLink(item: { label: string; href: string }) {
+    const isActive =
+      item.label === "Rejected"
+        ? isOnTalentBench && isRejectedFilter
+        : item.label === "Talent Bench"
+          ? isOnTalentBench && !isRejectedFilter
+          : pathname.startsWith(item.href);
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "rounded-md py-1.5 pr-3 pl-6 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+          isActive
+            ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+      >
+        {item.label}
+      </Link>
+    );
+  }
+
   return (
     <nav className="flex flex-col gap-1">
-      {moduleItems.map(navLink)}
+      <span className="px-3 py-2 text-sm font-medium text-sidebar-foreground">
+        Talent Acquisition Desk
+      </span>
+      {talentAcquisitionSubItems.map(talentAcquisitionSubLink)}
       {comingSoonItems.map((label) => (
         <div
           key={label}
