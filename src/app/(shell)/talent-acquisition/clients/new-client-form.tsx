@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,16 +9,20 @@ import {
   createClientRecord,
   type ClientActionState,
 } from "@/lib/talent-acquisition/clients-actions";
+import { NO_TIMEZONE_VALUE } from "@/lib/talent-acquisition/client-timezones";
+import { TimezoneSelect } from "./timezone-select";
 
 const initialState: ClientActionState = { error: null };
 
 export function NewClientForm({ onSuccess }: { onSuccess?: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [timezone, setTimezone] = useState(NO_TIMEZONE_VALUE);
 
   async function action(_prevState: ClientActionState, formData: FormData) {
     const result = await createClientRecord(_prevState, formData);
     if (!result.error) {
       formRef.current?.reset();
+      setTimezone(NO_TIMEZONE_VALUE);
       onSuccess?.();
     }
     return result;
@@ -50,10 +54,15 @@ export function NewClientForm({ onSuccess }: { onSuccess?: () => void }) {
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor="new-client-timezone">Timezone</Label>
-        <Input
-          id="new-client-timezone"
+        <TimezoneSelect
+          triggerId="new-client-timezone"
+          value={timezone}
+          onValueChange={(next) => next && setTimezone(next)}
+        />
+        <input
+          type="hidden"
           name="timezone"
-          placeholder="e.g. America/New_York"
+          value={timezone === NO_TIMEZONE_VALUE ? "" : timezone}
         />
       </div>
       <div className="flex flex-col gap-1">

@@ -8,11 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Section, SectionDivider } from "@/components/ui/section";
 import { ClientRow, type ClientListItem } from "./client-row";
 import { NewClientForm } from "./new-client-form";
 
-export function ClientsList({ clients }: { clients: ClientListItem[] }) {
+export function ClientsList({
+  clients,
+  isAdmin,
+}: {
+  clients: ClientListItem[];
+  isAdmin: boolean;
+}) {
   const [addOpen, setAddOpen] = useState(false);
 
   return (
@@ -42,14 +47,29 @@ export function ClientsList({ clients }: { clients: ClientListItem[] }) {
           No clients yet — add one to get started.
         </p>
       ) : (
-        <Section bodyClassName="px-0" className="gap-0 py-0">
-          {clients.map((client, i) => (
-            <div key={client.id}>
-              {i > 0 && <SectionDivider />}
-              <ClientRow client={client} />
-            </div>
-          ))}
-        </Section>
+        <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full min-w-[1100px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th className="px-3 py-2 font-normal">Company</th>
+                <th className="px-3 py-2 font-normal">Website</th>
+                <th className="px-3 py-2 font-normal">Location</th>
+                <th className="px-3 py-2 font-normal">Timezone</th>
+                <th className="px-3 py-2 font-normal">Point of contact</th>
+                <th className="px-3 py-2 font-normal">Roles</th>
+                <th className="px-3 py-2 font-normal">Notes</th>
+                <th className="px-3 py-2 font-normal">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map((client) => (
+                <ClientRow key={client.id} client={client} isAdmin={isAdmin} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

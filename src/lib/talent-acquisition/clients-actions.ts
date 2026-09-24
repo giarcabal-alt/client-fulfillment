@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireAdminUser } from "@/lib/auth/get-user-role";
 import { createClient } from "@/lib/supabase/server";
 
 export type ClientActionState = { error: string | null };
@@ -53,6 +54,53 @@ export async function createClientRecord(
   } catch (error) {
     console.error("Failed to create client:", error);
     return { error: "Couldn't create the client. Please try again." };
+  }
+
+  revalidatePath(CLIENTS_PATH);
+  return { error: null };
+}
+
+// Single batched update for the edit dialog (client-edit-dialog.tsx) —
+// one "Save" submits every field at once, same shape as
+// createClientRecord's insert, rather than firing 8+ separate per-field
+// Server Action calls on dialog close. The per-field actions below stay
+// as-is; they're still what the (now-removed) save-on-blur detail page
+// pattern would use if any future page wants that instead.
+export async function updateClientRecord(
+  id: string,
+  _prevState: ClientActionState,
+  formData: FormData
+): Promise<ClientActionState> {
+  const companyName = formData.get("company_name");
+  if (typeof companyName !== "string" || !companyName.trim()) {
+    return { error: "Company name is required." };
+  }
+
+  const optional = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  };
+
+  try {
+    const supabase = await requireUser();
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        company_name: companyName.trim(),
+        industry: optional("industry"),
+        website: optional("website"),
+        location: optional("location"),
+        timezone: optional("timezone"),
+        point_of_contact_name: optional("point_of_contact_name"),
+        point_of_contact_email: optional("point_of_contact_email"),
+        point_of_contact_phone: optional("point_of_contact_phone"),
+        notes: optional("notes"),
+      })
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to update client:", error);
+    return { error: "Couldn't save the client. Please try again." };
   }
 
   revalidatePath(CLIENTS_PATH);
@@ -157,4 +205,38 @@ export async function updateClientNotes(
   value: string | null
 ): Promise<ClientActionState> {
   return updateClientField(id, "notes", value);
+}
+
+// Admin-only, and pre-checks for linked roles itself before deleting —
+// `roles.client_id` is `ON DELETE SET NULL`, so a plain delete would
+// succeed but silently unlink every role still pointing at this client
+// rather than erroring the way roles.delete()'s own FK (candidates →
+// roles, ON DELETE RESTRICT-shaped via Postgres's default) does. That
+// silent-unlink is exactly what this task said not to allow, so the
+// check has to happen here in application code, not be inferred from a
+// Postgres error code the way deleteRole's 23503 handling is.
+export async function deleteClientRecord(id: string): Promise<ClientActionState> {
+  try {
+    await requireAdminUser();
+    const supabase = await createClient();
+    const { count, error: countError } = await supabase
+      .from("roles")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", id);
+    if (countError) throw countError;
+    if (count && count > 0) {
+      return {
+        error: `This client still has ${count} linked ${count === 1 ? "role" : "roles"}. Move or unlink ${count === 1 ? "it" : "them"} before deleting.`,
+      };
+    }
+
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Failed to delete client:", error);
+    return { error: "Couldn't delete the client. Please try again." };
+  }
+
+  revalidatePath(CLIENTS_PATH);
+  return { error: null };
 }
