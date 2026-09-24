@@ -5,29 +5,44 @@ import { RolesList } from "./roles-list";
 
 export default async function RolesPage() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("roles")
-    .select(
-      "id, title, job_description, status, timezone_overlap, classification, candidates(count)"
-    )
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: clientsData }] = await Promise.all([
+    supabase
+      .from("roles")
+      .select(
+        "id, title, job_description, status, timezone_overlap, classification, client:clients(id, company_name), candidates(count)"
+      )
+      .order("created_at", { ascending: false }),
+    supabase.from("clients").select("id, company_name").order("company_name"),
+  ]);
 
   if (error) {
     console.error("Failed to load roles:", error);
   }
 
-  const roles = (data ?? []).map((role) => ({
-    id: role.id as string,
-    title: role.title as string,
-    job_description: role.job_description as string | null,
-    status: role.status as "open" | "filled" | "closed",
-    timezone_overlap: role.timezone_overlap as string | null,
-    classification: role.classification as
-      | "embedded_operator"
-      | "project_based"
-      | null,
-    candidateCount: (role.candidates as { count: number }[] | null)?.[0]
-      ?.count ?? 0,
+  type ClientEmbed = { id: string; company_name: string } | { id: string; company_name: string }[] | null;
+
+  const roles = (data ?? []).map((role) => {
+    const clientEmbed = role.client as ClientEmbed;
+    const client = Array.isArray(clientEmbed) ? clientEmbed[0] ?? null : clientEmbed;
+    return {
+      id: role.id as string,
+      title: role.title as string,
+      job_description: role.job_description as string | null,
+      status: role.status as "open" | "filled" | "closed",
+      timezone_overlap: role.timezone_overlap as string | null,
+      classification: role.classification as
+        | "embedded_operator"
+        | "project_based"
+        | null,
+      clientName: client?.company_name ?? null,
+      candidateCount: (role.candidates as { count: number }[] | null)?.[0]
+        ?.count ?? 0,
+    };
+  });
+
+  const clients = (clientsData ?? []).map((c) => ({
+    id: c.id as string,
+    company_name: c.company_name as string,
   }));
 
   return (
@@ -52,7 +67,7 @@ export default async function RolesPage() {
         </p>
       )}
 
-      {!error && <RolesList roles={roles} />}
+      {!error && <RolesList roles={roles} clients={clients} />}
     </div>
   );
 }

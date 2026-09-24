@@ -9,26 +9,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Section, SectionDivider } from "@/components/ui/section";
-import { NewRoleForm } from "./new-role-form";
-import { RoleRow, type Role } from "./role-row";
+import { ClientRow, type ClientListItem } from "./client-row";
+import { NewClientForm } from "./new-client-form";
 
-export function RolesList({
-  roles,
-  clients,
-}: {
-  roles: Role[];
-  clients: { id: string; company_name: string }[];
-}) {
+export function ClientsList({ clients }: { clients: ClientListItem[] }) {
   const [addOpen, setAddOpen] = useState(false);
 
   return (
     <>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs tabular-nums text-muted-foreground">
-          {roles.length} {roles.length === 1 ? "role" : "roles"}
+          {clients.length} {clients.length === 1 ? "client" : "clients"}
         </p>
         <Button size="sm" onClick={() => setAddOpen(true)} className="shrink-0">
-          + Add role
+          + Add client
         </Button>
       </div>
 
@@ -36,23 +30,23 @@ export function RolesList({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-display text-lg text-ink-navy">
-              Add a role
+              Add a client
             </DialogTitle>
           </DialogHeader>
-          <NewRoleForm clients={clients} onSuccess={() => setAddOpen(false)} />
+          <NewClientForm onSuccess={() => setAddOpen(false)} />
         </DialogContent>
       </Dialog>
 
-      {roles.length === 0 ? (
+      {clients.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No roles yet — add one to get started.
+          No clients yet — add one to get started.
         </p>
       ) : (
         <Section bodyClassName="px-0" className="gap-0 py-0">
-          {roles.map((role, i) => (
-            <div key={role.id}>
+          {clients.map((client, i) => (
+            <div key={client.id}>
               {i > 0 && <SectionDivider />}
-              <RoleRow role={role} />
+              <ClientRow client={client} />
             </div>
           ))}
         </Section>

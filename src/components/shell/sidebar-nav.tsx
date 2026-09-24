@@ -28,6 +28,7 @@ const talentAcquisitionSubItems = [
     href: "/talent-acquisition/talent-bench?status=rejected",
   },
   { label: "Metrics", href: "/talent-acquisition/metrics" },
+  { label: "Clients", href: "/talent-acquisition/clients" },
 ];
 
 const comingSoonItems = ["Onboarding", "Kickoff"];

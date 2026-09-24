@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export type Role = {
   status: "open" | "filled" | "closed";
   timezone_overlap: string | null;
   classification: RoleClassification | null;
+  clientName: string | null;
   candidateCount: number;
 };
 
@@ -230,18 +232,26 @@ export function RoleRow({ role }: { role: Role }) {
           {role.candidateCount === 1 ? "candidate" : "candidates"}
         </span>
         <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          nativeButton={false}
+          render={<Link href={`/talent-acquisition/roles/${role.id}`}>Details</Link>}
+        />
+        <Button
           type="button"
           variant="ghost"
           size="sm"
           disabled={isPending}
           onClick={handleDelete}
-          className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           Delete
         </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {role.clientName && <span>Client: {role.clientName}</span>}
         {timezoneOverlap && <span>{timezoneOverlap}</span>}
         <button
           type="button"
