@@ -54,7 +54,9 @@ export default async function ShellLayout({
           `h-dvh` (not `h-screen`) so it also matches mobile browser UI
           chrome resizing correctly, matching MobileNav's own treatment. */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col bg-sidebar p-3 text-sidebar-foreground md:flex">
-        <Wordmark />
+        <div className="shrink-0">
+          <Wordmark />
+        </div>
         {/* Only the nav list itself scrolls if it ever outgrows the
             viewport — the logo above and greeting/sign-out below always
             stay pinned and reachable. `min-h-0` is required on a flex

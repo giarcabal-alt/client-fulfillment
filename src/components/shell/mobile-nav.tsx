@@ -71,10 +71,12 @@ export function MobileNav({
           side="left"
           className="flex flex-col bg-sidebar p-4 text-sidebar-foreground"
         >
-          <SheetHeader className="p-0">
-            <SheetTitle className="sr-only">Navigation</SheetTitle>
-          </SheetHeader>
-          <Wordmark />
+          <div className="shrink-0">
+            <SheetHeader className="p-0">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+            </SheetHeader>
+            <Wordmark />
+          </div>
           {/* Same split as the desktop `<aside>` in layout.tsx: only the
               nav list scrolls if it outgrows a short viewport, so
               sign-out below it can never become unreachable. The Sheet
