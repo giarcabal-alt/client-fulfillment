@@ -9,7 +9,7 @@ export default async function RolesPage() {
     supabase
       .from("roles")
       .select(
-        "id, title, job_description, status, timezone_overlap, classification, client:clients(id, company_name), candidates(count)"
+        "id, title, job_description, status, timezone_overlap, classification, priority, target_fill_date, client:clients(id, company_name), candidates(count)"
       )
       .order("created_at", { ascending: false }),
     supabase.from("clients").select("id, company_name").order("company_name"),
@@ -34,6 +34,8 @@ export default async function RolesPage() {
         | "embedded_operator"
         | "project_based"
         | null,
+      priority: role.priority as "standard" | "urgent" | "on_hold" | null,
+      target_fill_date: role.target_fill_date as string | null,
       clientName: client?.company_name ?? null,
       candidateCount: (role.candidates as { count: number }[] | null)?.[0]
         ?.count ?? 0,
@@ -46,7 +48,7 @@ export default async function RolesPage() {
   }));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-3 p-4 sm:p-6">
+    <div className="flex w-full flex-col gap-3 p-4 sm:p-6">
       <div className="min-w-0">
         <Button
           variant="outline"

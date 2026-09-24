@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Section, SectionDivider } from "@/components/ui/section";
 import { NewRoleForm } from "./new-role-form";
 import { RoleRow, type Role } from "./role-row";
 
@@ -48,14 +47,29 @@ export function RolesList({
           No roles yet — add one to get started.
         </p>
       ) : (
-        <Section bodyClassName="px-0" className="gap-0 py-0">
-          {roles.map((role, i) => (
-            <div key={role.id}>
-              {i > 0 && <SectionDivider />}
-              <RoleRow role={role} />
-            </div>
-          ))}
-        </Section>
+        <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full min-w-[900px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th className="px-3 py-2 font-normal">Title</th>
+                <th className="px-2 py-2 font-normal">Client</th>
+                <th className="px-2 py-2 font-normal">Status</th>
+                <th className="px-2 py-2 font-normal">Classification</th>
+                <th className="px-2 py-2 font-normal">Priority</th>
+                <th className="px-2 py-2 font-normal">Target fill</th>
+                <th className="px-2 py-2 text-right font-normal">Candidates</th>
+                <th className="px-3 py-2 font-normal">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map((role) => (
+                <RoleRow key={role.id} role={role} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );
