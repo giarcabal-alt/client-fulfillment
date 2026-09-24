@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Section, SectionDivider } from "@/components/ui/section";
+import { SectionDivider } from "@/components/ui/section";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createClient } from "@/lib/supabase/server";
-import { TimezoneClock } from "@/lib/talent-acquisition/timezone-clock";
+import { JobDescriptionEditor } from "./job-description-editor";
 import { RoleDetailForm, type RoleDetail } from "./role-detail-form";
 import { RoleSkillsEditor } from "../role-skills-editor";
 
@@ -40,7 +41,7 @@ export default async function RoleDetailPage({
       )
       .eq("id", id)
       .maybeSingle(),
-    supabase.from("clients").select("id, company_name").order("company_name"),
+    supabase.from("clients").select("id, company_name, timezone").order("company_name"),
     supabase.from("role_skills").select("skill:skills(id, name)").eq("role_id", id),
     supabase
       .from("role_skill_reviews")
@@ -81,6 +82,7 @@ export default async function RoleDetailPage({
   const clients = (clientsData ?? []).map((c) => ({
     id: c.id as string,
     company_name: c.company_name as string,
+    timezone: c.timezone as string | null,
   }));
 
   type SkillEmbed = { id: string; name: string } | { id: string; name: string }[] | null;
@@ -123,7 +125,7 @@ export default async function RoleDetailPage({
   }));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-3 p-4 sm:p-6">
+    <div className="flex w-full flex-col gap-3 p-4 sm:p-6">
       <Button
         variant="outline"
         size="sm"
@@ -132,72 +134,76 @@ export default async function RoleDetailPage({
         render={<Link href="/talent-acquisition/roles">← Back to Job Openings</Link>}
       />
 
-      <Section>
-        <RoleDetailForm role={role} clients={clients} />
-      </Section>
+      <RoleDetailForm role={role} clients={clients}>
+        <Tabs defaultValue="skills">
+          <TabsList>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+            <TabsTrigger value="jd">Job Description</TabsTrigger>
+            <TabsTrigger value="candidates">Candidates</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-      {client && (
-        <Section title="Client">
-          <div className="flex flex-col gap-1">
-            <Link
-              href={`/talent-acquisition/clients/${client.id}`}
-              className="text-sm font-medium text-work-blue hover:underline"
-            >
-              {client.company_name}
-            </Link>
-            <TimezoneClock timezone={client.timezone} clientLabel={client.company_name} />
-          </div>
-        </Section>
-      )}
+          <TabsContent value="skills">
+            <RoleSkillsEditor
+              roleId={role.id}
+              jobDescription={role.job_description ?? ""}
+              initialChips={initialChips}
+            />
+          </TabsContent>
 
-      <Section title="Skills">
-        <RoleSkillsEditor
-          roleId={role.id}
-          jobDescription={role.job_description ?? ""}
-          initialChips={initialChips}
-        />
-      </Section>
+          <TabsContent value="jd">
+            <JobDescriptionEditor
+              roleId={role.id}
+              initialJobDescription={role.job_description ?? ""}
+            />
+          </TabsContent>
 
-      <Section title="Candidates" bodyClassName="px-0" className="gap-0 py-0">
-        {candidates.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-muted-foreground">
-            No candidates linked to this role yet.
-          </p>
-        ) : (
-          candidates.map((c, i) => (
-            <div key={c.id}>
-              {i > 0 && <SectionDivider />}
-              <Link
-                href={`/talent-acquisition/candidates/${c.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-stone/30"
-              >
-                <span className="text-ink-navy">{c.name}</span>
-                <span className="text-xs text-muted-foreground">{c.stage}</span>
-              </Link>
-            </div>
-          ))
-        )}
-      </Section>
-
-      <Section title="History" bodyClassName="px-0" className="gap-0 py-0">
-        {history.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-muted-foreground">
-            No status changes logged yet.
-          </p>
-        ) : (
-          history.map((h, i) => (
-            <div key={h.id}>
-              {i > 0 && <SectionDivider />}
-              <div className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-                <span className="text-ink-navy">{h.label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(h.occurred_at).toLocaleDateString()}
-                </span>
+          <TabsContent value="candidates">
+            {candidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No candidates linked to this role yet.
+              </p>
+            ) : (
+              <div className="flex flex-col">
+                {candidates.map((c, i) => (
+                  <div key={c.id}>
+                    {i > 0 && <SectionDivider />}
+                    <Link
+                      href={`/talent-acquisition/candidates/${c.id}`}
+                      className="flex items-center justify-between gap-3 py-2 text-sm hover:bg-stone/30"
+                    >
+                      <span className="text-ink-navy">{c.name}</span>
+                      <span className="text-xs text-muted-foreground">{c.stage}</span>
+                    </Link>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))
-        )}
-      </Section>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No status changes logged yet.
+              </p>
+            ) : (
+              <div className="flex flex-col">
+                {history.map((h, i) => (
+                  <div key={h.id}>
+                    {i > 0 && <SectionDivider />}
+                    <div className="flex items-center justify-between gap-3 py-2 text-sm">
+                      <span className="text-ink-navy">{h.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(h.occurred_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </RoleDetailForm>
     </div>
   );
 }

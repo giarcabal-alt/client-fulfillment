@@ -106,7 +106,10 @@ Seven tokens total, each with one confirmed job — the palette's discipline is 
 
 ## Layout
 
-Max content width 1120px. Density favors scanability over airiness — this is a daily-use operations tool, not an editorial page. Responsive down to ~375px: the sidebar collapses to a top bar + slide-out sheet below the `md` breakpoint; content padding steps down from the desktop default to a smaller gutter so a phone-width viewport isn't eaten by desktop spacing.
+App screens use the full available width beside the sidebar, with the app's standard page padding (`p-4 sm:p-6`) as the gutter — not a centered, capped column. The 1120px max width from the brand guide's marketing-site context is reserved for long-form reading text specifically (e.g. a job description's full text block), where line length matters for readability; it is not a page-level rule. Density favors scanability over airiness — this is a daily-use operations tool, not an editorial page. Responsive down to ~375px: the sidebar collapses to a top bar + slide-out sheet below the `md` breakpoint; content padding steps down from the desktop default to a smaller gutter so a phone-width viewport isn't eaten by desktop spacing.
+
+### Named Rules
+**The Full-Width Rule.** App screens fill the width available beside the sidebar; only long-form reading text (a job description block, prose) gets the 1120px reading-width cap. Adopted 2026-09-24 after the original blanket 1120px cap — inherited from the brand guide's marketing-site context — was found to waste space and force heavy scrolling on data-dense pages like role/candidate detail and the Job Openings/Clients tables. See `PROJECT_STATE.md` §8.
 
 ## Density
 

@@ -48,7 +48,7 @@ Tailwind v4 `@theme` block (CSS-first, no `tailwind.config.js`) — drop into `g
 ## 4. Layout & components
 
 - Background: `warm-paper`, always. No dark mode — don't build a theme toggle.
-- Max content width: 1120px.
+- Max content width: **app screens use the full available width beside the sidebar**, with sensible page padding (the app's existing `p-4 sm:p-6` gutter). The 1120px cap from the brand guide's marketing-site context does not apply to a data-dense internal tool — it was producing wasted whitespace and heavy scrolling on wide viewports (see the 2026-09-24 decision in `PROJECT_STATE.md` §8). The 1120px cap still applies specifically to **long-form reading text** — a block of prose meant to be read top-to-bottom, like a job description's full text — where an unconstrained line length would hurt readability; it is not a page-level rule anymore.
 - Cards: 12px radius, 1px `stone` border, `warm-paper` or white-adjacent fill (don't introduce pure white).
 - Buttons: `work-blue` solid fill, white text, 8px radius, **verb-first labels** ("Generate suggested message", not "Message generation"). This app already mostly does this — worth double-checking every button label during the UI build prompts.
 - Motion: fade/rise on scroll only. No other animation flourishes.
