@@ -69,16 +69,23 @@ export function MobileNav({
         />
         <SheetContent
           side="left"
-          className="flex flex-col justify-between bg-sidebar p-4 text-sidebar-foreground"
+          className="flex flex-col bg-sidebar p-4 text-sidebar-foreground"
         >
-          <div>
-            <SheetHeader className="p-0">
-              <SheetTitle className="sr-only">Navigation</SheetTitle>
-            </SheetHeader>
-            <Wordmark />
+          <SheetHeader className="p-0">
+            <SheetTitle className="sr-only">Navigation</SheetTitle>
+          </SheetHeader>
+          <Wordmark />
+          {/* Same split as the desktop `<aside>` in layout.tsx: only the
+              nav list scrolls if it outgrows a short viewport, so
+              sign-out below it can never become unreachable. The Sheet
+              itself is already `fixed`/viewport-height (sheet.tsx), so
+              it doesn't scroll away with the page the way the old
+              non-sticky `<aside>` did — this only guards against the nav
+              list's own content overflowing the Sheet's fixed height. */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <SidebarNav isAdmin={isAdmin} />
           </div>
-          <div>
+          <div className="shrink-0">
             <Greeting displayName={displayName} />
             <form action={signOut}>
               <button

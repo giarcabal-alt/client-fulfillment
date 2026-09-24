@@ -43,12 +43,27 @@ export default async function ShellLayout({
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
-      <aside className="hidden w-60 shrink-0 flex-col justify-between bg-sidebar p-3 text-sidebar-foreground md:flex">
-        <div>
-          <Wordmark />
+      {/* `sticky top-0 h-dvh` pins the sidebar to the viewport regardless
+          of how tall the main content column gets — without an explicit
+          height here, the flex row's default `align-items: stretch`
+          would otherwise stretch this to match main's full (scrollable)
+          content height, defeating `sticky` entirely. This is also what
+          was behind the "sidebar background stops partway down" bug:
+          the aside's painted height was tied to page content height, not
+          the viewport, so a short page left a visible gap below it.
+          `h-dvh` (not `h-screen`) so it also matches mobile browser UI
+          chrome resizing correctly, matching MobileNav's own treatment. */}
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col bg-sidebar p-3 text-sidebar-foreground md:flex">
+        <Wordmark />
+        {/* Only the nav list itself scrolls if it ever outgrows the
+            viewport — the logo above and greeting/sign-out below always
+            stay pinned and reachable. `min-h-0` is required on a flex
+            child for `overflow-y-auto` to actually kick in instead of
+            the item just growing past its flex basis. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <SidebarNav isAdmin={isAdmin} />
         </div>
-        <div>
+        <div className="shrink-0">
           <Greeting displayName={displayName} />
           <form action={signOut}>
             <button
