@@ -12,12 +12,14 @@ import { cn } from "@/lib/utils"
  * reaching for a second `Card`.
  */
 export function Section({
+  id,
   title,
   action,
   children,
   className,
   bodyClassName,
 }: {
+  id?: string
   title?: string
   action?: React.ReactNode
   children: React.ReactNode
@@ -26,8 +28,9 @@ export function Section({
 }) {
   return (
     <section
+      id={id}
       className={cn(
-        "flex flex-col gap-2 rounded-xl border border-border bg-card py-3 text-sm text-card-foreground",
+        "flex flex-col gap-2 rounded-xl border border-border bg-card py-3 text-sm text-card-foreground scroll-mt-4",
         className
       )}
     >

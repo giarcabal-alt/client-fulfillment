@@ -40,8 +40,12 @@ export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
     ? [
         { label: "Settings", href: "/settings", match: "/settings" },
         { label: "Admin", href: "/admin", match: "/admin" },
+        { label: "How to Use", href: "/help", match: "/help" },
       ]
-    : [{ label: "Settings", href: "/settings", match: "/settings" }];
+    : [
+        { label: "Settings", href: "/settings", match: "/settings" },
+        { label: "How to Use", href: "/help", match: "/help" },
+      ];
 
   function navLink(item: { label: string; href: string; match: string }) {
     const isActive = pathname.startsWith(item.match);
