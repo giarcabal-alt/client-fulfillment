@@ -40,6 +40,41 @@ import {
   NOTICE_PERIODS,
 } from "@/lib/talent-acquisition/employment-fields";
 import { SOURCE_PLATFORMS } from "@/lib/talent-acquisition/source-platforms";
+import { cn } from "@/lib/utils";
+
+// Task 3 (candidate detail layout pass): a fixed, narrower label column
+// (~130px, vs. the shared PropertyRow default of 9.5rem/152px) so the
+// value column gets more room, plus wrapping instead of truncating —
+// values like "AI Solutions Engineer" / "Quezon City, Metro Manila" were
+// clipping ("AI Solutions Engi…") with the wider default label column.
+const LABEL_CLASS = "w-[130px]";
+const ROW_CLASS = "py-1";
+const WRAP_INPUT_CLASS = cn(propertyControlClass, "whitespace-normal break-words");
+// `<input>` never wraps its value regardless of white-space CSS — for the
+// free-text fields most likely to run long (last role, last company,
+// expected compensation), an auto-growing `<textarea rows={1}>` is used
+// instead so a long value grows the row rather than scrolling/clipping
+// inside a fixed-width box. Same pattern as the Job Openings table's
+// title cell (role-row.tsx).
+function autoResizeField(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
+const WRAP_TEXTAREA_CLASS = cn(
+  propertyControlClass,
+  "resize-none overflow-hidden whitespace-normal break-words"
+);
+// Select-based rows need more than whitespace-normal: the shared
+// propertySelectTriggerClass forces single-line ellipsis truncation on
+// its value span (line-clamp-1, nowrap, fixed h-8/h-7 trigger height) so
+// long values are always legible inside a compact PropertyRow elsewhere
+// in the app — this page overrides all of that so values wrap and the
+// trigger grows to fit instead.
+const WRAP_SELECT_TRIGGER_CLASS = cn(
+  propertySelectTriggerClass,
+  "h-auto min-h-7 items-start whitespace-normal py-1.5 data-[size=default]:h-auto data-[size=sm]:h-auto *:data-[slot=select-value]:line-clamp-none [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:overflow-visible [&_[data-slot=select-value]]:text-clip [&_[data-slot=select-value]]:whitespace-normal [&_[data-slot=select-value]]:break-words [&_svg]:mt-0.5"
+);
 
 const NO_ROLE_VALUE = "none";
 const NO_SOURCE_VALUE = "none";
@@ -319,9 +354,9 @@ export function CandidateDetailForm({
 
   return (
     <div className="flex flex-col">
-      <PropertyRow label="Stage">
+      <PropertyRow label="Stage" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
         <Select value={stage} onValueChange={handleStageChange} disabled={isPending}>
-          <SelectTrigger aria-label="Stage" className={propertySelectTriggerClass}>
+          <SelectTrigger aria-label="Stage" className={WRAP_SELECT_TRIGGER_CLASS}>
             <SelectValue>{(value: string) => stageLabelFor(value)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -334,9 +369,9 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Role">
+      <PropertyRow label="Role" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
         <Select value={roleId} onValueChange={handleRoleChange} disabled={isPending}>
-          <SelectTrigger aria-label="Role" className={propertySelectTriggerClass}>
+          <SelectTrigger aria-label="Role" className={WRAP_SELECT_TRIGGER_CLASS}>
             <SelectValue>{(value: string) => roleLabelFor(value)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -350,13 +385,13 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Source">
+      <PropertyRow label="Source" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
         <Select
           value={sourcePlatform}
           onValueChange={handleSourceChange}
           disabled={isPending}
         >
-          <SelectTrigger aria-label="Source" className={propertySelectTriggerClass}>
+          <SelectTrigger aria-label="Source" className={WRAP_SELECT_TRIGGER_CLASS}>
             <SelectValue>{(value: string) => sourceLabelFor(value)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -370,7 +405,7 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Communication">
+      <PropertyRow label="Communication" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
         <Select
           value={communicationRating}
           onValueChange={handleRatingChange}
@@ -378,7 +413,7 @@ export function CandidateDetailForm({
         >
           <SelectTrigger
             aria-label="Communication rating"
-            className={propertySelectTriggerClass}
+            className={WRAP_SELECT_TRIGGER_CLASS}
           >
             <SelectValue>{(value: string) => ratingLabelFor(value)}</SelectValue>
           </SelectTrigger>
@@ -393,13 +428,13 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Location">
+      <PropertyRow label="Location" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
         <Select
           value={locationId}
           onValueChange={handleLocationChange}
           disabled={isPending}
         >
-          <SelectTrigger aria-label="Location" className={propertySelectTriggerClass}>
+          <SelectTrigger aria-label="Location" className={WRAP_SELECT_TRIGGER_CLASS}>
             <SelectValue>{(value: string) => locationLabelFor(value)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -413,7 +448,11 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Years of experience">
+      <PropertyRow
+        label="Years of experience"
+        labelClassName={LABEL_CLASS}
+        className={ROW_CLASS}
+      >
         <Input
           aria-label="Years of experience"
           type="number"
@@ -424,35 +463,49 @@ export function CandidateDetailForm({
           onBlur={saveYearsExperience}
           disabled={isPending}
           placeholder="e.g. 5"
-          className={propertyControlClass}
+          className={WRAP_INPUT_CLASS}
         />
       </PropertyRow>
 
-      <PropertyRow label="Last role">
-        <Input
+      <PropertyRow label="Last role" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
+        <textarea
+          ref={autoResizeField}
           aria-label="Last role"
           value={lastRole}
-          onChange={(e) => setLastRole(e.target.value)}
+          onChange={(e) => {
+            setLastRole(e.target.value);
+            autoResizeField(e.target);
+          }}
           onBlur={saveLastRole}
           disabled={isPending}
           placeholder="e.g. Senior Backend Engineer"
-          className={propertyControlClass}
+          rows={1}
+          className={WRAP_TEXTAREA_CLASS}
         />
       </PropertyRow>
 
-      <PropertyRow label="Last company">
-        <Input
+      <PropertyRow label="Last company" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
+        <textarea
+          ref={autoResizeField}
           aria-label="Last company"
           value={lastCompany}
-          onChange={(e) => setLastCompany(e.target.value)}
+          onChange={(e) => {
+            setLastCompany(e.target.value);
+            autoResizeField(e.target);
+          }}
           onBlur={saveLastCompany}
           disabled={isPending}
           placeholder="e.g. Acme Corp"
-          className={propertyControlClass}
+          rows={1}
+          className={WRAP_TEXTAREA_CLASS}
         />
       </PropertyRow>
 
-      <PropertyRow label="Employment status">
+      <PropertyRow
+        label="Employment status"
+        labelClassName={LABEL_CLASS}
+        className={ROW_CLASS}
+      >
         <Select
           value={employmentStatus}
           onValueChange={handleEmploymentStatusChange}
@@ -460,7 +513,7 @@ export function CandidateDetailForm({
         >
           <SelectTrigger
             aria-label="Employment status"
-            className={propertySelectTriggerClass}
+            className={WRAP_SELECT_TRIGGER_CLASS}
           >
             <SelectValue>{(value: string) => employmentStatusLabelFor(value)}</SelectValue>
           </SelectTrigger>
@@ -475,13 +528,13 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Notice period">
+      <PropertyRow label="Notice period" labelClassName={LABEL_CLASS} className={ROW_CLASS}>
         <Select
           value={noticePeriod}
           onValueChange={handleNoticePeriodChange}
           disabled={isPending}
         >
-          <SelectTrigger aria-label="Notice period" className={propertySelectTriggerClass}>
+          <SelectTrigger aria-label="Notice period" className={WRAP_SELECT_TRIGGER_CLASS}>
             <SelectValue>{(value: string) => noticePeriodLabelFor(value)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -495,15 +548,24 @@ export function CandidateDetailForm({
         </Select>
       </PropertyRow>
 
-      <PropertyRow label="Expected compensation">
-        <Input
+      <PropertyRow
+        label="Expected compensation"
+        labelClassName={LABEL_CLASS}
+        className={ROW_CLASS}
+      >
+        <textarea
+          ref={autoResizeField}
           aria-label="Expected compensation"
           value={expectedCompensation}
-          onChange={(e) => setExpectedCompensation(e.target.value)}
+          onChange={(e) => {
+            setExpectedCompensation(e.target.value);
+            autoResizeField(e.target);
+          }}
           onBlur={saveExpectedCompensation}
           disabled={isPending}
           placeholder="e.g. ₱80k/mo or $2,000/mo"
-          className={propertyControlClass}
+          rows={1}
+          className={WRAP_TEXTAREA_CLASS}
         />
       </PropertyRow>
 

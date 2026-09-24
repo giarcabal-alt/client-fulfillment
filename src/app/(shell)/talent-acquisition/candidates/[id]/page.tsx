@@ -290,7 +290,7 @@ export default async function CandidateDetailPage({
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-3 p-4 sm:p-6">
+    <div className="flex w-full flex-col gap-3 p-4 sm:p-6">
       <div>
         <Link
           href="/talent-acquisition/board"
@@ -328,7 +328,7 @@ export default async function CandidateDetailPage({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
         {/* Left: persistent Properties section, visible across every tab. */}
         <div className="flex flex-col gap-3">
           <Section title="Properties">
@@ -337,7 +337,7 @@ export default async function CandidateDetailPage({
               roles={roles}
               locations={locations}
             />
-            <PropertyRow label="Assigned to">
+            <PropertyRow label="Assigned to" labelClassName="w-[130px]" className="py-1">
               <AssignmentField
                 candidateId={candidate.id}
                 assignee={assignee}

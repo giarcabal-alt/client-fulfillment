@@ -14,19 +14,29 @@ export function PropertyRow({
   label,
   children,
   className,
+  labelClassName,
 }: {
   label: string
   children: React.ReactNode
   className?: string
+  /** Override the label column's width — defaults to the standard
+   * `w-[9.5rem]` (152px). Pass e.g. `"w-[130px]"` for a page whose panel
+   * is narrow enough that the wider default crowds the value column. */
+  labelClassName?: string
 }) {
   return (
     <div
       className={cn(
-        "group/row -mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-stone/30 focus-within:bg-stone/30",
+        "group/row -mx-2 flex items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-stone/30 focus-within:bg-stone/30",
         className
       )}
     >
-      <span className="w-[9.5rem] shrink-0 text-xs text-muted-foreground">
+      <span
+        className={cn(
+          "w-[9.5rem] shrink-0 pt-1 text-xs text-muted-foreground",
+          labelClassName
+        )}
+      >
         {label}
       </span>
       <div className="min-w-0 flex-1">{children}</div>
